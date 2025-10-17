@@ -1,16 +1,16 @@
 # Vapour
 
-Type-safe Gleam bindings for [Steamworks.js](https://github.com/ceifa/steamworks.js) - bringing Steam platform features to your Gleam applications.
+Type-safe Gleam bindings for [steamworks-ffi-node](https://github.com/ArtyProf/steamworks-ffi-node) - bringing Steam platform features to your Gleam applications.
 
 ## Features
 
-Vapour provides 1:1 bindings to the Steamworks.js library with type-safe Gleam wrappers for:
+Vapour provides 1:1 bindings to the steamworks-ffi-node library with type-safe Gleam wrappers for:
 
 - **Core API** - Initialization and lifecycle management
 - **Achievements** - Unlock, check, and manage Steam achievements
-- **Local Player** - Get player information (name, level, country, Steam ID)
-- **Apps** - Query app and DLC installation, subscription status
+- **Local Player** - Get player name and set Rich Presence
 - **Cloud** - Save files to Steam Cloud and sync across devices
+- **Overlay** - Control the Steam overlay and open dialogs
 
 ## Installation
 
@@ -21,12 +21,12 @@ Add vapour to your `gleam.toml`:
 vapour = { git = "https://github.com/renatillas/vapour.git", tag = "v0.1.0" }
 ```
 
-Add the steamworks.js dependency to your `package.json`:
+Add the steamworks-ffi-node dependency to your `package.json`:
 
 ```json
 {
   "dependencies": {
-    "steamworks.js": "^0.4.0"
+    "steamworks-ffi-node": "^0.5.3"
   }
 }
 ```
@@ -41,26 +41,20 @@ import vapour/localplayer
 import vapour/achievement
 
 pub fn main() {
-  // Check if we need to restart through Steam
-  case vapour.restart_app_if_necessary(480) {
-    True -> io.println("Restarting through Steam...")
-    False -> {
-      // Initialize with your Steam app ID
-      let assert Ok(_client) = vapour.init(option.Some(480))
+  // Initialize with your Steam app ID
+  let assert Ok(client) = vapour.init(option.Some(480))
 
-      // Run callbacks regularly (e.g., each frame)
-      vapour.run_callbacks()
+  // Run callbacks regularly (e.g., each frame)
+  vapour.run_callbacks(client)
 
-      // Get player info
-      let name = localplayer.get_name()
-      io.println("Hello, " <> name <> "!")
+  // Get player info
+  let name = localplayer.get_name(client)
+  io.println("Hello, " <> name <> "!")
 
-      // Unlock an achievement
-      case achievement.activate("MY_ACHIEVEMENT") {
-        True -> io.println("Achievement unlocked!")
-        False -> io.println("Failed to unlock achievement")
-      }
-    }
+  // Unlock an achievement
+  case achievement.activate(client, "MY_ACHIEVEMENT") {
+    True -> io.println("Achievement unlocked!")
+    False -> io.println("Failed to unlock achievement")
   }
 }
 ```
@@ -79,13 +73,13 @@ Vapour follows Tiramisu's layered FFI architecture:
 │   steamworks.ffi.mjs                │  ← Pure 1:1 bindings
 │   (No logic, just thin wrappers)   │
 ├─────────────────────────────────────┤
-│   Steamworks.js Library             │  ← Native Steam API
+│   steamworks-ffi-node Library       │  ← Native Steam API
 └─────────────────────────────────────┘
 ```
 
 ### Design Principles
 
-- **Pure FFI Layer**: `steamworks.ffi.mjs` contains only 1:1 bindings to Steamworks.js
+- **Pure FFI Layer**: `steamworks.ffi.mjs` contains only 1:1 bindings to steamworks-ffi-node
 - **Type-Safe Wrappers**: Gleam modules provide validation and ergonomic APIs
 - **Opaque Types**: Internal Steam objects are wrapped in opaque Gleam types
 - **No Business Logic in FFI**: All logic lives in Gleam for testability
@@ -107,7 +101,7 @@ let assert Ok(client) = vapour.init(option.Some(480))
 let assert Ok(client) = vapour.init(option.None)
 
 // Run callbacks each frame
-vapour.run_callbacks()
+vapour.run_callbacks(client)
 ```
 
 ### Achievement (`vapour/achievement`)
@@ -115,16 +109,20 @@ vapour.run_callbacks()
 Manage Steam achievements:
 
 ```gleam
+import vapour
 import vapour/achievement
+import gleam/option
+
+let assert Ok(client) = vapour.init(option.Some(480))
 
 // Unlock an achievement
-achievement.activate("WIN_GAME")
+achievement.activate(client, "WIN_GAME")
 
 // Check if unlocked
-let unlocked = achievement.is_activated("WIN_GAME")
+let unlocked = achievement.is_activated(client, "WIN_GAME")
 
 // Get all achievement names
-let all_achievements = achievement.names()
+let all_achievements = achievement.names(client)
 ```
 
 ### Local Player (`vapour/localplayer`)
@@ -132,40 +130,47 @@ let all_achievements = achievement.names()
 Access local player information:
 
 ```gleam
+import vapour
 import vapour/localplayer
+import gleam/option
+
+let assert Ok(client) = vapour.init(option.Some(480))
 
 // Get player name
-let name = localplayer.get_name()
-
-// Get Steam ID
-let steam_id = localplayer.get_steam_id()
-io.println("Steam ID 64: " <> steam_id.steam_id_64)
-
-// Get player level
-let level = localplayer.get_level()
+let name = localplayer.get_name(client)
 
 // Set Rich Presence
-localplayer.set_rich_presence("status", option.Some("In Menu"))
+localplayer.set_rich_presence(client, "status", option.Some("In Menu"))
+
+// Clear Rich Presence
+localplayer.set_rich_presence(client, "status", option.None)
 ```
 
-### Apps (`vapour/apps`)
+### Overlay (`vapour/overlay`)
 
-Query app and DLC information:
+Control the Steam overlay:
 
 ```gleam
-import vapour/apps
+import vapour
+import vapour/overlay
+import gleam/option
 
-// Check if user owns this app
-let subscribed = apps.is_subscribed()
+let assert Ok(client) = vapour.init(option.Some(480))
 
-// Check DLC installation
-let has_dlc = apps.is_dlc_installed(480)
+// Show achievements
+overlay.activate_dialog(client, "Achievements")
 
-// Get current language
-let language = apps.current_game_language()
+// Show friends list
+overlay.activate_dialog(client, "Friends")
 
-// Get app owner (detects Family Sharing)
-let owner = apps.app_owner()
+// Open user profile
+overlay.activate_dialog_to_user(client, "steamid", "76561197960287930")
+
+// Open web page
+overlay.activate_web_page(client, "https://example.com")
+
+// Open store page for DLC
+overlay.activate_store(client, 12345)
 ```
 
 ### Cloud (`vapour/cloud`)
@@ -173,42 +178,54 @@ let owner = apps.app_owner()
 Save files to Steam Cloud:
 
 ```gleam
+import vapour
 import vapour/cloud
+import gleam/option
+
+let assert Ok(client) = vapour.init(option.Some(480))
 
 // Write a save file
-cloud.write_file("save.json", "{\"level\": 5}")
+cloud.write_file(client, "save.json", "{\"level\": 5}")
 
 // Read a save file
-let save_data = cloud.read_file("save.json")
+let save_data = cloud.read_file(client, "save.json")
 
 // Check if file exists
-let has_save = cloud.file_exists("save.json")
+let has_save = cloud.file_exists(client, "save.json")
 
 // List all files
-let files = cloud.list_files()
+let files = cloud.list_files(client)
 
 // Delete a file
-cloud.delete_file("save.json")
+cloud.delete_file(client, "save.json")
 ```
 
 ## Running the Example
 
-The `vapour_example` project demonstrates all features:
+The `examples` directory contains a demo project showcasing all features:
 
 ```bash
-cd vapour_example
+cd examples
 gleam build
 gleam run
 ```
 
 **Note**: You'll need Steam running and the Spacewar app (AppID 480) to test. Spacewar is Steam's free test application available to all developers.
 
+The example demonstrates:
+- Initializing the Steam client
+- Getting player information
+- Setting/clearing Rich Presence
+- Listing achievements
+- Reading/writing to Steam Cloud
+- Overlay functionality (commented out by default)
+
 ## Requirements
 
 - Gleam >= 1.0.0
-- Node.js (for JavaScript target)
+- Node.js >= 18.0.0 (for JavaScript target)
 - Steam running on your machine
-- steamworks.js ^0.4.0
+- steamworks-ffi-node ^0.5.3
 
 ## Development
 
@@ -223,19 +240,20 @@ gleam test
 gleam format
 
 # Build and run example
-cd vapour_example
+cd examples
 gleam build
 gleam run
 ```
 
 ## Future Modules
 
-Vapour currently implements the most commonly used Steam APIs. Future additions may include:
+Vapour currently implements the APIs available in steamworks-ffi-node. Future additions as steamworks-ffi-node expands may include:
 
+- **Stats** - User statistics and leaderboards
+- **Friends** - Friends list and social features
 - **Input** - Steam Input (controllers)
 - **Matchmaking** - Lobby and matchmaking
 - **Networking** - P2P networking
-- **Overlay** - Steam overlay control
 - **Workshop** - Steam Workshop integration
 
 ## License
@@ -245,5 +263,5 @@ MIT
 ## Credits
 
 - Built with [Gleam](https://gleam.run)
-- Bindings for [Steamworks.js](https://github.com/ceifa/steamworks.js)
+- Bindings for [steamworks-ffi-node](https://github.com/ArtyProf/steamworks-ffi-node)
 - Inspired by [Tiramisu](https://github.com/renatillas/tiramisu) game engine architecture

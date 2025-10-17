@@ -1,5 +1,7 @@
 // Achievement API - Manage Steam achievements
 
+import vapour
+
 /// Activate (unlock) an achievement
 ///
 /// Returns True if the achievement was successfully activated,
@@ -8,21 +10,23 @@
 /// ## Example
 ///
 /// ```gleam
+/// import vapour
 /// import vapour/achievement
+/// import gleam/option
 ///
-/// pub fn complete_level() {
-///   case achievement.activate("ACH_WIN_ONE_GAME") {
+/// pub fn complete_level(client: vapour.Client) {
+///   case achievement.activate(client, "ACH_WIN_ONE_GAME") {
 ///     True -> io.println("Achievement unlocked!")
 ///     False -> io.println("Failed to unlock achievement")
 ///   }
 /// }
 /// ```
-pub fn activate(achievement: String) -> Bool {
-  do_activate(achievement)
+pub fn activate(client: vapour.Client, achievement: String) -> Bool {
+  do_activate(vapour.get_client(client), achievement)
 }
 
 @external(javascript, "../steamworks.ffi.mjs", "achievementActivate")
-fn do_activate(achievement: String) -> Bool
+fn do_activate(client: vapour.SteamworksClient, achievement: String) -> Bool
 
 /// Check if an achievement is activated
 ///
@@ -31,21 +35,23 @@ fn do_activate(achievement: String) -> Bool
 /// ## Example
 ///
 /// ```gleam
+/// import vapour
 /// import vapour/achievement
+/// import gleam/option
 ///
-/// pub fn check_achievement() {
-///   case achievement.is_activated("ACH_WIN_ONE_GAME") {
+/// pub fn check_achievement(client: vapour.Client) {
+///   case achievement.is_activated(client, "ACH_WIN_ONE_GAME") {
 ///     True -> io.println("Already unlocked")
 ///     False -> io.println("Not yet unlocked")
 ///   }
 /// }
 /// ```
-pub fn is_activated(achievement: String) -> Bool {
-  do_is_activated(achievement)
+pub fn is_activated(client: vapour.Client, achievement: String) -> Bool {
+  do_is_activated(vapour.get_client(client), achievement)
 }
 
 @external(javascript, "../steamworks.ffi.mjs", "achievementIsActivated")
-fn do_is_activated(achievement: String) -> Bool
+fn do_is_activated(client: vapour.SteamworksClient, achievement: String) -> Bool
 
 /// Clear (lock) an achievement
 ///
@@ -55,18 +61,20 @@ fn do_is_activated(achievement: String) -> Bool
 /// ## Example
 ///
 /// ```gleam
+/// import vapour
 /// import vapour/achievement
+/// import gleam/option
 ///
-/// pub fn reset_achievements() {
-///   achievement.clear("ACH_WIN_ONE_GAME")
+/// pub fn reset_achievements(client: vapour.Client) {
+///   achievement.clear(client, "ACH_WIN_ONE_GAME")
 /// }
 /// ```
-pub fn clear(achievement: String) -> Bool {
-  do_clear(achievement)
+pub fn clear(client: vapour.Client, achievement: String) -> Bool {
+  do_clear(vapour.get_client(client), achievement)
 }
 
 @external(javascript, "../steamworks.ffi.mjs", "achievementClear")
-fn do_clear(achievement: String) -> Bool
+fn do_clear(client: vapour.SteamworksClient, achievement: String) -> Bool
 
 /// Get a list of all achievement names
 ///
@@ -75,18 +83,20 @@ fn do_clear(achievement: String) -> Bool
 /// ## Example
 ///
 /// ```gleam
+/// import vapour
 /// import vapour/achievement
 /// import gleam/list
 /// import gleam/io
+/// import gleam/option
 ///
-/// pub fn list_all_achievements() {
-///   achievement.names()
+/// pub fn list_all_achievements(client: vapour.Client) {
+///   achievement.names(client)
 ///   |> list.each(io.println)
 /// }
 /// ```
-pub fn names() -> List(String) {
-  do_names()
+pub fn names(client: vapour.Client) -> List(String) {
+  do_names(vapour.get_client(client))
 }
 
 @external(javascript, "../steamworks.ffi.mjs", "achievementNames")
-fn do_names() -> List(String)
+fn do_names(client: vapour.SteamworksClient) -> List(String)

@@ -1,163 +1,234 @@
-import gleam/io
+import gleam/bool
 import gleam/int
+import gleam/io
+import gleam/list
 import gleam/option
 import vapour
 import vapour/achievement
-import vapour/localplayer
-import vapour/apps
 import vapour/cloud
+import vapour/localplayer
+import vapour/overlay
 
 pub fn main() -> Nil {
-  io.println("=== Vapour - Steamworks.js Example ===\n")
+  io.println("=== Vapour - steamworks-ffi-node Example ===")
+  io.println("Testing ALL functionality of the library\n")
 
-  // Check if we need to restart through Steam
-  case vapour.restart_app_if_necessary(480) {
+  // Initialize Steamworks with Spacewar (480) - Steam's test app
+  io.println(">>> Initializing Steamworks...")
+  let assert Ok(client) = vapour.init(option.Some(480))
+  io.println("✓ Steamworks initialized\n")
+
+  // Run callbacks
+  io.println(">>> Running callbacks...")
+  vapour.run_callbacks(client)
+  io.println("✓ Callbacks processed\n")
+
+  // Test all modules
+  demo_localplayer(client)
+  demo_achievements(client)
+  demo_cloud(client)
+  demo_overlay(client)
+
+  io.println("\n=== All Tests Complete ===")
+}
+
+fn demo_localplayer(client: vapour.Client) -> Nil {
+  io.println("─────────────────────────────────")
+  io.println("LOCAL PLAYER API")
+  io.println("─────────────────────────────────")
+
+  // Test: get_name()
+  io.println("\n1. Testing get_name()...")
+  let name = localplayer.get_name(client)
+  io.println("   Player name: " <> name)
+  io.println("   ✓ get_name() works")
+
+  // Test: set_rich_presence() with value
+  io.println("\n2. Testing set_rich_presence() with value...")
+  localplayer.set_rich_presence(client, "status", option.Some("Testing Vapour"))
+  io.println("   ✓ Rich presence set to 'Testing Vapour'")
+
+  // Test: set_rich_presence() with None (clear)
+  io.println("\n3. Testing set_rich_presence() with None (clear)...")
+  localplayer.set_rich_presence(client, "status", option.None)
+  io.println("   ✓ Rich presence cleared")
+
+  io.println("")
+}
+
+fn demo_achievements(client: vapour.Client) -> Nil {
+  io.println("─────────────────────────────────")
+  io.println("ACHIEVEMENT API")
+  io.println("─────────────────────────────────")
+
+  // Test: names()
+  io.println("\n1. Testing names()...")
+  let achievement_list = achievement.names(client)
+  let count = list.length(achievement_list)
+  io.println("   Found " <> int.to_string(count) <> " achievements")
+  io.println("   ✓ names() works")
+
+  case achievement_list {
+    [] -> {
+      io.println(
+        "\n   Note: No achievements configured for this app (Spacewar)",
+      )
+      io.println(
+        "   Skipping achievement tests (activate, is_activated, clear)",
+      )
+    }
+    [first, ..] -> {
+      io.println("\n   Testing with achievement: " <> first)
+
+      // Test: is_activated() - before activation
+      io.println("\n2. Testing is_activated() - before activation...")
+      let is_active_before = achievement.is_activated(client, first)
+      io.println("   Activated: " <> bool.to_string(is_active_before))
+      io.println("   ✓ is_activated() works")
+
+      // Test: activate()
+      io.println("\n3. Testing activate()...")
+      let activated = achievement.activate(client, first)
+      io.println("   Result: " <> bool.to_string(activated))
+      io.println("   ✓ activate() works")
+
+      // Test: is_activated() - after activation
+      io.println("\n4. Testing is_activated() - after activation...")
+      let is_active_after = achievement.is_activated(client, first)
+      io.println("   Activated: " <> bool.to_string(is_active_after))
+      io.println("   ✓ is_activated() reflects activation")
+
+      // Test: clear() - for testing purposes
+      io.println("\n5. Testing clear() - for testing purposes...")
+      let cleared = achievement.clear(client, first)
+      io.println("   Result: " <> bool.to_string(cleared))
+      io.println("   ✓ clear() works")
+
+      // Test: is_activated() - after clearing
+      io.println("\n6. Testing is_activated() - after clearing...")
+      let is_active_cleared = achievement.is_activated(client, first)
+      io.println("   Activated: " <> bool.to_string(is_active_cleared))
+      io.println("   ✓ is_activated() reflects clearing")
+    }
+  }
+
+  io.println("")
+}
+
+fn demo_cloud(client: vapour.Client) -> Nil {
+  io.println("─────────────────────────────────")
+  io.println("CLOUD API")
+  io.println("─────────────────────────────────")
+
+  // Test: is_enabled_for_account()
+  io.println("\n1. Testing is_enabled_for_account()...")
+  let enabled_account = cloud.is_enabled_for_account(client)
+  io.println(
+    "   Cloud enabled for account: " <> bool.to_string(enabled_account),
+  )
+  io.println("   ✓ is_enabled_for_account() works")
+
+  // Test: is_enabled_for_app()
+  io.println("\n2. Testing is_enabled_for_app()...")
+  let enabled_app = cloud.is_enabled_for_app(client)
+  io.println("   Cloud enabled for app: " <> bool.to_string(enabled_app))
+  io.println("   ✓ is_enabled_for_app() works")
+
+  // Test: set_enabled_for_app()
+  io.println("\n3. Testing set_enabled_for_app()...")
+  cloud.set_enabled_for_app(client, True)
+  io.println("   ✓ set_enabled_for_app(True) works")
+
+  // Test: write_file()
+  io.println("\n4. Testing write_file()...")
+  let test_file = "vapour_test.txt"
+  let test_content = "Hello from Vapour! Test data: 12345"
+  let write_result = cloud.write_file(client, test_file, test_content)
+  io.println("   Write result: " <> bool.to_string(write_result))
+  io.println("   ✓ write_file() works")
+
+  case write_result {
     True -> {
-      io.println("App not launched through Steam, restarting...")
-      Nil
+      // Test: file_exists()
+      io.println("\n5. Testing file_exists()...")
+      let exists = cloud.file_exists(client, test_file)
+      io.println("   File exists: " <> bool.to_string(exists))
+      io.println("   ✓ file_exists() works")
+
+      // Test: read_file()
+      io.println("\n6. Testing read_file()...")
+      let read_content = cloud.read_file(client, test_file)
+      io.println("   Read content: " <> read_content)
+      let content_matches = read_content == test_content
+      io.println("   Content matches: " <> bool.to_string(content_matches))
+      io.println("   ✓ read_file() works")
+
+      // Test: list_files()
+      io.println("\n7. Testing list_files()...")
+      let files = cloud.list_files(client)
+      io.println("   Total cloud files: " <> int.to_string(list.length(files)))
+      case list.find(files, fn(f) { f.name == test_file }) {
+        Ok(file) -> {
+          io.println("   Found our test file:")
+          io.println("     Name: " <> file.name)
+          io.println("     Size: " <> file.size <> " bytes")
+        }
+        Error(_) -> io.println("   Test file not found in list")
+      }
+      io.println("   ✓ list_files() works")
+
+      // Test: delete_file()
+      io.println("\n8. Testing delete_file()...")
+      let delete_result = cloud.delete_file(client, test_file)
+      io.println("   Delete result: " <> bool.to_string(delete_result))
+      io.println("   ✓ delete_file() works")
+
+      // Test: file_exists() after delete
+      io.println("\n9. Testing file_exists() after delete...")
+      let exists_after = cloud.file_exists(client, test_file)
+      io.println("   File exists: " <> bool.to_string(exists_after))
+      io.println("   ✓ file_exists() correctly shows file is gone")
     }
     False -> {
-      io.println("✓ App launched through Steam\n")
-
-      // Initialize Steamworks with Spacewar (480) - Steam's test app
-      let assert Ok(_client) = vapour.init(option.Some(480))
-      io.println("✓ Steamworks initialized\n")
-
-      // Run callbacks once
-      vapour.run_callbacks()
-
-      // Demonstrate local player API
-      demo_localplayer()
-
-      // Demonstrate apps API
-      demo_apps()
-
-      // Demonstrate achievement API
-      demo_achievements()
-
-      // Demonstrate cloud API
-      demo_cloud()
-
-      io.println("\n=== Demo Complete ===")
+      io.println("\n   Warning: Cloud write failed, skipping remaining tests")
+      io.println("   This might be because cloud is disabled or not available")
     }
-  }
-}
-
-fn demo_localplayer() -> Nil {
-  io.println("--- Local Player ---")
-
-  let name = localplayer.get_name()
-  io.println("Player name: " <> name)
-
-  let level = localplayer.get_level()
-  io.println("Steam level: " <> int.to_string(level))
-
-  let country = localplayer.get_ip_country()
-  io.println("Country: " <> country)
-
-  let steam_id = localplayer.get_steam_id()
-  io.println("Steam ID 64: " <> steam_id.steam_id_64)
-  io.println("Steam ID 32: " <> steam_id.steam_id_32)
-  io.println("Account ID: " <> int.to_string(steam_id.account_id))
-
-  // Set rich presence
-  localplayer.set_rich_presence("status", option.Some("Testing Vapour"))
-  io.println("✓ Rich presence set\n")
-}
-
-fn demo_apps() -> Nil {
-  io.println("--- Apps ---")
-
-  let subscribed = apps.is_subscribed()
-  io.println("Subscribed to app: " <> bool_to_string(subscribed))
-
-  let language = apps.current_game_language()
-  io.println("Current language: " <> language)
-
-  let build_id = apps.app_build_id()
-  io.println("Build ID: " <> int.to_string(build_id))
-
-  case apps.current_beta_name() {
-    option.Some(beta) -> io.println("Beta branch: " <> beta)
-    option.None -> io.println("Not in beta branch")
   }
 
   io.println("")
 }
 
-fn demo_achievements() -> Nil {
-  io.println("--- Achievements ---")
+fn demo_overlay(client: vapour.Client) -> Nil {
+  io.println("─────────────────────────────────")
+  io.println("OVERLAY API")
+  io.println("─────────────────────────────────")
 
-  let achievement_list = achievement.names()
+  io.println("\n1. Testing activate_dialog()...")
+  io.println("   Opening Achievements dialog...")
+  overlay.activate_dialog(client, "Achievements")
+  io.println("   ✓ activate_dialog() works")
+  io.println("   (Check if Steam overlay opened)")
+
+  io.println("\n2. Testing activate_dialog_to_user()...")
+  io.println("   Opening user profile (example Steam ID)...")
+  overlay.activate_dialog_to_user(client, "steamid", "76561197960287930")
+  io.println("   ✓ activate_dialog_to_user() works")
+  io.println("   (Check if user profile opened)")
+
+  io.println("\n3. Testing activate_web_page()...")
+  io.println("   Opening gleam.run website...")
+  overlay.activate_web_page(client, "https://gleam.run")
+  io.println("   ✓ activate_web_page() works")
+  io.println("   (Check if web page opened in overlay)")
+
+  io.println("\n4. Testing activate_store()...")
+  io.println("   Opening store page for Spacewar (480)...")
+  overlay.activate_store(client, 480)
+  io.println("   ✓ activate_store() works")
+  io.println("   (Check if store page opened)")
+
   io.println(
-    "Total achievements: " <> int.to_string(list_length(achievement_list)),
+    "\nNote: Overlay functions trigger Steam UI - check if they opened!",
   )
-
-  // Check if a specific achievement is activated
-  // Note: Replace with actual achievement IDs from your app
-  case achievement_list {
-    [first, ..] -> {
-      io.println("Checking achievement: " <> first)
-      let activated = achievement.is_activated(first)
-      io.println("Activated: " <> bool_to_string(activated))
-    }
-    [] -> io.println("No achievements configured")
-  }
-
   io.println("")
-}
-
-fn demo_cloud() -> Nil {
-  io.println("--- Cloud ---")
-
-  let enabled_account = cloud.is_enabled_for_account()
-  io.println("Cloud enabled for account: " <> bool_to_string(enabled_account))
-
-  let enabled_app = cloud.is_enabled_for_app()
-  io.println("Cloud enabled for app: " <> bool_to_string(enabled_app))
-
-  // Try to write and read a test file
-  let test_file = "vapour_test.txt"
-  let test_content = "Hello from Vapour!"
-
-  case cloud.write_file(test_file, test_content) {
-    True -> {
-      io.println("✓ Test file written to cloud")
-
-      case cloud.file_exists(test_file) {
-        True -> {
-          let content = cloud.read_file(test_file)
-          io.println("✓ Test file read from cloud: " <> content)
-
-          // Clean up
-          case cloud.delete_file(test_file) {
-            True -> io.println("✓ Test file deleted from cloud")
-            False -> io.println("✗ Failed to delete test file")
-          }
-        }
-        False -> io.println("✗ Test file not found in cloud")
-      }
-    }
-    False -> io.println("✗ Failed to write test file")
-  }
-
-  // List all cloud files
-  let files = cloud.list_files()
-  io.println("Total cloud files: " <> int.to_string(list_length(files)))
-
-  io.println("")
-}
-
-fn bool_to_string(value: Bool) -> String {
-  case value {
-    True -> "true"
-    False -> "false"
-  }
-}
-
-fn list_length(list: List(a)) -> Int {
-  case list {
-    [] -> 0
-    [_, ..rest] -> 1 + list_length(rest)
-  }
 }

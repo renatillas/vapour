@@ -10,8 +10,8 @@ pub opaque type Client {
   Client(internal: SteamworksClient)
 }
 
-/// Internal FFI type
-type SteamworksClient
+/// Internal FFI type - exposed for use by submodules
+pub type SteamworksClient
 
 /// Initialize the Steamworks API
 ///
@@ -57,41 +57,6 @@ fn do_init_default() -> SteamworksClient {
 @external(javascript, "./steamworks.ffi.mjs", "init")
 fn do_init_null() -> SteamworksClient
 
-/// Restart the app if it wasn't launched through Steam
-///
-/// This function checks if your executable was launched through Steam.
-/// If it wasn't, it will restart your app through Steam.
-///
-/// Returns True if the app needs to restart (in which case you should
-/// exit immediately), False if the app was launched through Steam.
-///
-/// ## Example
-///
-/// ```gleam
-/// import vapour
-///
-/// pub fn main() {
-///   // Check if we need to restart through Steam
-///   case vapour.restart_app_if_necessary(480) {
-///     True -> {
-///       // App will restart through Steam, exit now
-///       Nil
-///     }
-///     False -> {
-///       // All good, continue with normal startup
-///       let assert Ok(client) = vapour.init(option.Some(480))
-///       // ...
-///     }
-///   }
-/// }
-/// ```
-pub fn restart_app_if_necessary(app_id: Int) -> Bool {
-  do_restart_app_if_necessary(app_id)
-}
-
-@external(javascript, "./steamworks.ffi.mjs", "restartAppIfNecessary")
-fn do_restart_app_if_necessary(app_id: Int) -> Bool
-
 /// Run Steam callbacks
 ///
 /// This should be called regularly (ideally every frame) to process
@@ -101,17 +66,26 @@ fn do_restart_app_if_necessary(app_id: Int) -> Bool
 ///
 /// ```gleam
 /// import vapour
+/// import gleam/option
 ///
-/// pub fn game_loop() {
+/// pub fn game_loop(client: vapour.Client) {
 ///   // Process Steam callbacks each frame
-///   vapour.run_callbacks()
+///   vapour.run_callbacks(client)
 ///
 ///   // Rest of your game loop...
 /// }
 /// ```
-pub fn run_callbacks() -> Nil {
-  do_run_callbacks()
+pub fn run_callbacks(client: Client) -> Nil {
+  do_run_callbacks(client.internal)
 }
 
 @external(javascript, "./steamworks.ffi.mjs", "runCallbacks")
-fn do_run_callbacks() -> Nil
+fn do_run_callbacks(client: SteamworksClient) -> Nil
+
+/// Get the internal client reference for passing to submodules
+///
+/// This is used internally by vapour modules to access the Steam client.
+/// You don't typically need to call this directly.
+pub fn get_client(client: Client) -> SteamworksClient {
+  client.internal
+}

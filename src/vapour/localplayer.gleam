@@ -1,34 +1,7 @@
 // Local Player API - Information about the current Steam user
 
 import gleam/option.{type Option}
-
-/// Represents a Steam ID in various formats
-pub type SteamId {
-  SteamId(steam_id_64: String, steam_id_32: String, account_id: Int)
-}
-
-/// Get the local player's Steam ID
-///
-/// Returns the Steam ID of the currently logged in user in multiple formats.
-///
-/// ## Example
-///
-/// ```gleam
-/// import vapour/localplayer
-/// import gleam/io
-///
-/// pub fn show_player_info() {
-///   let id = localplayer.get_steam_id()
-///   io.println("Steam ID 64: " <> id.steam_id_64)
-///   io.println("Steam ID 32: " <> id.steam_id_32)
-/// }
-/// ```
-pub fn get_steam_id() -> SteamId {
-  do_get_steam_id()
-}
-
-@external(javascript, "../steamworks.ffi.mjs", "localplayerGetSteamId")
-fn do_get_steam_id() -> SteamId
+import vapour
 
 /// Get the local player's display name
 ///
@@ -37,100 +10,62 @@ fn do_get_steam_id() -> SteamId
 /// ## Example
 ///
 /// ```gleam
+/// import vapour
 /// import vapour/localplayer
 /// import gleam/io
+/// import gleam/option
 ///
-/// pub fn greet_player() {
-///   let name = localplayer.get_name()
+/// pub fn greet_player(client: vapour.Client) {
+///   let name = localplayer.get_name(client)
 ///   io.println("Hello, " <> name <> "!")
 /// }
 /// ```
-pub fn get_name() -> String {
-  do_get_name()
+pub fn get_name(client: vapour.Client) -> String {
+  do_get_name(vapour.get_client(client))
 }
 
 @external(javascript, "../steamworks.ffi.mjs", "localplayerGetName")
-fn do_get_name() -> String
-
-/// Get the local player's Steam level
-///
-/// Returns the Steam community level of the currently logged in user.
-///
-/// ## Example
-///
-/// ```gleam
-/// import vapour/localplayer
-/// import gleam/int
-/// import gleam/io
-///
-/// pub fn show_level() {
-///   let level = localplayer.get_level()
-///   io.println("Steam Level: " <> int.to_string(level))
-/// }
-/// ```
-pub fn get_level() -> Int {
-  do_get_level()
-}
-
-@external(javascript, "../steamworks.ffi.mjs", "localplayerGetLevel")
-fn do_get_level() -> Int
-
-/// Get the local player's IP country
-///
-/// Returns the two-letter country code for the country the user is currently in.
-///
-/// ## Example
-///
-/// ```gleam
-/// import vapour/localplayer
-/// import gleam/io
-///
-/// pub fn show_country() {
-///   let country = localplayer.get_ip_country()
-///   io.println("Country: " <> country)
-/// }
-/// ```
-pub fn get_ip_country() -> String {
-  do_get_ip_country()
-}
-
-@external(javascript, "../steamworks.ffi.mjs", "localplayerGetIpCountry")
-fn do_get_ip_country() -> String
+fn do_get_name(client: vapour.SteamworksClient) -> String
 
 /// Set Rich Presence data
 ///
 /// Sets a Rich Presence key/value pair for the current user. This will be
 /// visible to other users in their Steam overlay when viewing your profile.
 ///
-/// Pass None for the value to clear the key.
+/// Pass None for the value to clear all Rich Presence data.
 ///
 /// ## Example
 ///
 /// ```gleam
+/// import vapour
 /// import vapour/localplayer
 /// import gleam/option
 ///
-/// pub fn update_status() {
+/// pub fn update_status(client: vapour.Client) {
 ///   // Set status
-///   localplayer.set_rich_presence("status", option.Some("In Main Menu"))
+///   localplayer.set_rich_presence(client, "status", option.Some("In Main Menu"))
 ///
-///   // Clear status
-///   localplayer.set_rich_presence("status", option.None)
+///   // Clear all rich presence
+///   localplayer.set_rich_presence(client, "status", option.None)
 /// }
 /// ```
-pub fn set_rich_presence(key: String, value: Option(String)) -> Nil {
+pub fn set_rich_presence(
+  client: vapour.Client,
+  key: String,
+  value: Option(String),
+) -> Nil {
   case value {
-    option.Some(v) -> do_set_rich_presence(key, v)
-    option.None -> do_clear_rich_presence(key)
+    option.Some(v) -> do_set_rich_presence(vapour.get_client(client), key, v)
+    option.None -> do_clear_rich_presence(vapour.get_client(client))
   }
 }
 
 @external(javascript, "../steamworks.ffi.mjs", "localplayerSetRichPresence")
-fn do_set_rich_presence(key: String, value: String) -> Nil
+fn do_set_rich_presence(
+  client: vapour.SteamworksClient,
+  key: String,
+  value: String,
+) -> Nil
 
-fn do_clear_rich_presence(key: String) -> Nil {
-  do_set_rich_presence_undefined(key)
-}
-
-@external(javascript, "../steamworks.ffi.mjs", "localplayerSetRichPresence")
-fn do_set_rich_presence_undefined(key: String) -> Nil
+@external(javascript, "../steamworks.ffi.mjs", "localplayerClearRichPresence")
+fn do_clear_rich_presence(client: vapour.SteamworksClient) -> Nil

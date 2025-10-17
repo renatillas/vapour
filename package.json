@@ -1,10 +1,10 @@
 {
   "name": "vapour",
   "version": "0.1.0",
-  "description": "Type-safe Gleam bindings for Steamworks.js",
+  "description": "Type-safe Gleam bindings for steamworks-ffi-node",
   "type": "module",
   "dependencies": {
-    "steamworks.js": "^0.4.0"
+    "steamworks-ffi-node": "^0.5.3"
   },
   "devDependencies": {},
   "repository": {

@@ -4,15 +4,13 @@
     "": {
       "name": "vapour",
       "dependencies": {
-        "steamworks.js": "^0.4.0",
+        "steamworks-ffi-node": "^0.5.3",
       },
     },
   },
   "packages": {
-    "@types/node": ["@types/node@24.8.1", "", { "dependencies": { "undici-types": "~7.14.0" } }, "sha512-alv65KGRadQVfVcG69MuB4IzdYVpRwMG/mq8KWOaoOdyY617P5ivaDiMCGOFDWD2sAn5Q0mR3mRtUOgm99hL9Q=="],
+    "koffi": ["koffi@2.14.1", "", {}, "sha512-IMFL3IbRDXacSIjs7pPbPxgNlJ2hUtawQXU2QPdr6iw38jmv5AesAUG8HPX00xl0PPA2BbEa3noTw1YdHY+gHg=="],
 
-    "steamworks.js": ["steamworks.js@0.4.0", "", { "dependencies": { "@types/node": "*" } }, "sha512-O5TTRs7ucCRql4IA/kYUIQYeghTsXqf3rAm81sC22RDId264LQYqQjuaMEUSqL60I5LdULiGu0W2/A+ZDcKBKA=="],
-
-    "undici-types": ["undici-types@7.14.0", "", {}, "sha512-QQiYxHuyZ9gQUIrmPo3IA+hUl4KYk8uSA7cHrcKd/l3p1OTpZcM0Tbp9x7FAtXdAYhlasd60ncPpgu6ihG6TOA=="],
+    "steamworks-ffi-node": ["steamworks-ffi-node@0.5.3", "", { "dependencies": { "koffi": "^2.8.8" } }, "sha512-Pgy2g1cx1zmGttNZ9Ar6Ldr1JJyonjZCcl9U2ju37Giq4AUEYAjuMxhF0sVj1GuBewxqQRIJWz8nEwMxtjV1Bg=="],
   }
 }
