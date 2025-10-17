@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Renata Amutio
+// SPDX-License-Identifier: MIT
+//
 // Achievement API - Manage Steam achievements
 
 import vapour

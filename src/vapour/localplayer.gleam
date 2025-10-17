@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Renata Amutio
+// SPDX-License-Identifier: MIT
+//
 // Local Player API - Information about the current Steam user
 
 import gleam/option.{type Option}

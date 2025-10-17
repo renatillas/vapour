@@ -1,4 +1,7 @@
-// Core Vapour module - Steamworks.js bindings for Gleam
+// Copyright (c) 2025 Renata Amutio
+// SPDX-License-Identifier: MIT
+//
+// Core Vapour module - steamworks-ffi-node bindings for Gleam
 //
 // This module provides the main initialization and lifecycle functions
 // for the Steamworks API.

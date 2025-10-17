@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Renata Amutio
+// SPDX-License-Identifier: MIT
+//
 // Cloud API - Steam Cloud save file management
 
 import vapour

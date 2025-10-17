@@ -258,7 +258,11 @@ Vapour currently implements the APIs available in steamworks-ffi-node. Future ad
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details.
+
+Vapour uses the same MIT license as its underlying dependency [steamworks-ffi-node](https://github.com/ArtyProf/steamworks-ffi-node).
+
+**Note**: While Vapour and steamworks-ffi-node are MIT licensed, using the Steamworks SDK requires compliance with the [Steamworks SDK License Agreement](https://partner.steamgames.com/doc/sdk/api). You must be a registered Steam developer to use the Steamworks API in production.
 
 ## Credits
 

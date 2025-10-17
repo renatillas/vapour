@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Renata Amutio
+// SPDX-License-Identifier: MIT
+//
 // Pure 1:1 bindings to steamworks-ffi-node
 // No business logic - just thin wrappers around the Steamworks API
 
