@@ -1,0 +1,13 @@
+name = "vapour"
+version = "0.1.0"
+description = "Type-safe Gleam bindings for Steamworks.js - 1:1 Steam API integration"
+licences = ["MIT"]
+repository = { type = "github", user = "renatillas", repo = "vapour" }
+
+target = "javascript"
+
+[dependencies]
+gleam_stdlib = ">= 0.44.0 and < 2.0.0"
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
