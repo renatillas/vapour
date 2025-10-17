@@ -1,0 +1,11 @@
+"Chromium Shortcut" = "Chromium കുറുക്കുവഴി";
+CFBundleGetInfoString = "nwjs 141.0.7390.55, Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSAudioCaptureUsageDescription = "Chromium-ത്തിന് ആക്‌സസ് ലഭിച്ചുകഴിഞ്ഞാൽ, വെബ്‌സൈറ്റുകൾക്ക് നിങ്ങളോട് ആക്‌സസ് ചോദിക്കാനാകും.";
+NSBluetoothAlwaysUsageDescription = "Chromium-ത്തിന് ആക്‌സസ് ലഭിച്ചുകഴിഞ്ഞാൽ, വെബ്‌സൈറ്റുകൾക്ക് നിങ്ങളോട് ആക്‌സസ് ചോദിക്കാനാകും.";
+NSBluetoothPeripheralUsageDescription = "Chromium-ത്തിന് ആക്‌സസ് ലഭിച്ചുകഴിഞ്ഞാൽ, വെബ്‌സൈറ്റുകൾക്ക് നിങ്ങളോട് ആക്‌സസ് ചോദിക്കാനാകും.";
+NSCameraUsageDescription = "Chromium-ത്തിന് ആക്‌സസ് ലഭിച്ചുകഴിഞ്ഞാൽ, വെബ്‌സൈറ്റുകൾക്ക് നിങ്ങളോട് ആക്‌സസ് ചോദിക്കാനാകും.";
+NSHumanReadableCopyright = "Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSLocalNetworkUsageDescription = "ലഭ്യമായ ഉപകരണങ്ങളിൽ നിന്ന് തിരഞ്ഞെടുക്കാനും അവയിൽ ഉള്ളടക്കം പ്രദർശിപ്പിക്കാനും ഇത് നിങ്ങളെ അനുവദിക്കും.";
+NSLocationUsageDescription = "Chromium-ത്തിന് ആക്‌സസ് ലഭിച്ചുകഴിഞ്ഞാൽ, വെബ്‌സൈറ്റുകൾക്ക് നിങ്ങളോട് ആക്‌സസ് ചോദിക്കാനാകും.";
+NSMicrophoneUsageDescription = "Chromium-ത്തിന് ആക്‌സസ് ലഭിച്ചുകഴിഞ്ഞാൽ, വെബ്‌സൈറ്റുകൾക്ക് നിങ്ങളോട് ആക്‌സസ് ചോദിക്കാനാകും.";
+NSWebBrowserPublicKeyCredentialUsageDescription = "Chromium-ത്തിന് ആക്‌സസ് ലഭിച്ചുകഴിഞ്ഞാൽ, വെബ്‌സൈറ്റുകൾക്ക് നിങ്ങളോട് ആക്‌സസ് ചോദിക്കാനാകും.";

@@ -1,0 +1,11 @@
+"Chromium Shortcut" = "Пряк път към Chromium";
+CFBundleGetInfoString = "nwjs 141.0.7390.55, Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSAudioCaptureUsageDescription = "След като Chromium получи достъп, уебсайтовете ще могат да искат достъп от вас.";
+NSBluetoothAlwaysUsageDescription = "След като Chromium получи достъп, уебсайтовете ще могат да искат достъп от вас.";
+NSBluetoothPeripheralUsageDescription = "След като Chromium получи достъп, уебсайтовете ще могат да искат достъп от вас.";
+NSCameraUsageDescription = "След като Chromium получи достъп, уебсайтовете ще могат да искат достъп от вас.";
+NSHumanReadableCopyright = "Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSLocalNetworkUsageDescription = "Това ще ви даде възможност да избирате от наличните устройства и да показвате съдържание на тях.";
+NSLocationUsageDescription = "След като Chromium получи достъп, уебсайтовете ще могат да искат достъп от вас.";
+NSMicrophoneUsageDescription = "След като Chromium получи достъп, уебсайтовете ще могат да искат достъп от вас.";
+NSWebBrowserPublicKeyCredentialUsageDescription = "След като Chromium получи достъп, уебсайтовете ще могат да искат достъп от вас.";

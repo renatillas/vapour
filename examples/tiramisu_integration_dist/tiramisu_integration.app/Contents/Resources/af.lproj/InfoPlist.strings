@@ -1,0 +1,11 @@
+"Chromium Shortcut" = "Chromium-kortpad";
+CFBundleGetInfoString = "nwjs 141.0.7390.55, Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSAudioCaptureUsageDescription = "Sodra Chromium toegang het, sal webwerwe jou kan vra vir toegang.";
+NSBluetoothAlwaysUsageDescription = "Sodra Chromium toegang het, sal webwerwe jou kan vra vir toegang.";
+NSBluetoothPeripheralUsageDescription = "Sodra Chromium toegang het, sal webwerwe jou kan vra vir toegang.";
+NSCameraUsageDescription = "Sodra Chromium toegang het, sal webwerwe jou kan vra vir toegang.";
+NSHumanReadableCopyright = "Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSLocalNetworkUsageDescription = "Hiermee sal jy uit beskikbare toestelle kan kies en inhoud daarop kan wys.";
+NSLocationUsageDescription = "Sodra Chromium toegang het, sal webwerwe jou kan vra vir toegang.";
+NSMicrophoneUsageDescription = "Sodra Chromium toegang het, sal webwerwe jou kan vra vir toegang.";
+NSWebBrowserPublicKeyCredentialUsageDescription = "Sodra Chromium toegang het, sal webwerwe jou kan vra vir toegang.";

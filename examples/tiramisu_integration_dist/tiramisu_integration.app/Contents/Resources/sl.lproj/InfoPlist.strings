@@ -1,0 +1,11 @@
+"Chromium Shortcut" = "Bližnjica za Chromium";
+CFBundleGetInfoString = "nwjs 141.0.7390.55, Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSAudioCaptureUsageDescription = "Ko bo imel Chromium dostop, vas bodo spletna mesta lahko pozvala k omogočanju dostopa.";
+NSBluetoothAlwaysUsageDescription = "Ko bo imel Chromium dostop, vas bodo spletna mesta lahko pozvala k omogočanju dostopa.";
+NSBluetoothPeripheralUsageDescription = "Ko bo imel Chromium dostop, vas bodo spletna mesta lahko pozvala k omogočanju dostopa.";
+NSCameraUsageDescription = "Ko bo imel Chromium dostop, vas bodo spletna mesta lahko pozvala k omogočanju dostopa.";
+NSHumanReadableCopyright = "Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSLocalNetworkUsageDescription = "Tako boste lahko izbirali med razpoložljivimi napravami in v njih prikazali vsebino.";
+NSLocationUsageDescription = "Ko bo imel Chromium dostop, vas bodo spletna mesta lahko pozvala k omogočanju dostopa.";
+NSMicrophoneUsageDescription = "Ko bo imel Chromium dostop, vas bodo spletna mesta lahko pozvala k omogočanju dostopa.";
+NSWebBrowserPublicKeyCredentialUsageDescription = "Ko bo imel Chromium dostop, vas bodo spletna mesta lahko pozvala k omogočanju dostopa.";

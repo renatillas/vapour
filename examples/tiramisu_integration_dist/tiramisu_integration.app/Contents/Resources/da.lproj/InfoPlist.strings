@@ -1,0 +1,11 @@
+"Chromium Shortcut" = "Chromium-genvej";
+CFBundleGetInfoString = "nwjs 141.0.7390.55, Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSAudioCaptureUsageDescription = "Når Chromium har adgang, kan websites bede dig om adgang.";
+NSBluetoothAlwaysUsageDescription = "Når Chromium har adgang, kan websites bede dig om adgang.";
+NSBluetoothPeripheralUsageDescription = "Når Chromium har adgang, kan websites bede dig om adgang.";
+NSCameraUsageDescription = "Når Chromium har adgang, kan websites bede dig om adgang.";
+NSHumanReadableCopyright = "Copyright 2025 The Chromium Authors, NW.js, Node.js. All rights reserved.";
+NSLocalNetworkUsageDescription = "Dette giver dig mulighed for at vælge mellem tilgængelige enheder og vise indhold på dem.";
+NSLocationUsageDescription = "Når Chromium har adgang, kan websites bede dig om adgang.";
+NSMicrophoneUsageDescription = "Når Chromium har adgang, kan websites bede dig om adgang.";
+NSWebBrowserPublicKeyCredentialUsageDescription = "Når Chromium har adgang, kan websites bede dig om adgang.";
