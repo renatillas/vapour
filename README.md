@@ -35,45 +35,6 @@ Add to your `package.json`:
 }
 ```
 
-## Quick Start
-
-```gleam
-import gleam/javascript/promise
-import gleam/option
-import vapour
-
-pub fn main() {
-  // Initialize with your Steam App ID (or use 480 for testing with Spacewar)
-  let assert Ok(client) = vapour.init(option.Some(480))
-
-  // Run callbacks regularly to keep the connection alive
-  vapour.run_callbacks(client)
-
-  // Get player name
-  let name = vapour.display_name(client)
-  io.println("Welcome, " <> name <> "!")
-
-  // Set rich presence
-  vapour.set_rich_presence(client, "status", "In Main Menu")
-
-  // Save to cloud
-  case vapour.write_file(client, "save.dat", "game data") {
-    True -> io.println("Saved to cloud!")
-    False -> io.println("Failed to save")
-  }
-
-  // Unlock achievement (async)
-  vapour.unlock_achievement(client, "ACH_WIN_ONE_GAME")
-  |> promise.await(fn(success) {
-    case success {
-      True -> io.println("Achievement unlocked!")
-      False -> io.println("Failed to unlock")
-    }
-    promise.resolve(Nil)
-  })
-}
-```
-
 ## Key Concepts
 
 ### Callbacks
@@ -92,7 +53,7 @@ promise.resolve(Nil)
 Steam Cloud must be enabled for your app and the user's account. Check with:
 
 ```gleam
-let enabled = vapour.is_cloud_enabled_for_account(client)
+let enabled = vapour.cloud_enabled_for_account(client)
 ```
 
 ## Documentation
@@ -118,23 +79,6 @@ gleam run
 - Steam running on your machine
 - steamworks-ffi-node ^0.5.3
 
-## API Coverage
-
-Currently implemented (from steamworks-ffi-node):
-
-| Feature | Functions | Status |
-|---------|-----------|--------|
-| Core API | 5 | ✅ Complete |
-| Achievements | 4 | ✅ Complete |
-| Cloud Storage | 7 | ✅ Complete |
-| Rich Presence | 3 | ✅ Complete |
-| Overlay | 4 | ✅ Complete |
-| Stats | 12 | ✅ Complete |
-| Friends | 13 | ✅ Complete |
-| Leaderboards | 4 | ✅ Complete |
-
-**Total: 52 functions** across 8 feature areas!
-
 ## License
 
 MIT License - see [LICENSE](./LICENSE) for details.
@@ -145,7 +89,6 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 - Built with [Gleam](https://gleam.run)
 - Bindings for [steamworks-ffi-node](https://github.com/ArtyProf/steamworks-ffi-node) by Artur Khutak
-- Inspired by [Tiramisu](https://github.com/renatillas/tiramisu) architecture
 
 ---
 

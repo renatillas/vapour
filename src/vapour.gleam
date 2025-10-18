@@ -9,13 +9,13 @@
 //// ## Features
 ////
 //// - **Core API**: Initialize Steamworks, run callbacks, check connection status
-//// - **Achievements**: Unlock/lock achievements, list achievements (async with Promises)
+//// - **Achievements**: Unlock/lock achievements, list achievements, track progress, get global unlock percentages (async with Promises)
 //// - **Cloud Storage**: Save/load files to Steam Cloud, manage cloud settings
-//// - **Rich Presence**: Set player status visible to friends
-//// - **Overlay**: Trigger Steam overlay dialogs (friends, achievements, store, web pages)
+//// - **Rich Presence**: Set player status visible to friends (e.g., "In Menu", "Playing Level 3")
+//// - **Overlay**: Trigger Steam overlay dialogs (friends, achievements, store, web pages, invite multiplayer)
 //// - **Stats**: Track player statistics, get/set int and float stats, global stats, user stats, average rate stats (async with Promises)
-//// - **Friends**: Get friends list, check online status, view friend info, relationship status, coplay features
-//// - **Leaderboards**: Find leaderboards, upload scores, download entries (async with Promises)
+//// - **Friends**: Get friends list, check online status, view friend info, avatars, relationship status, coplay (recently played with) features
+//// - **Leaderboards**: Find/create leaderboards, upload scores, download entries with custom sort/display options (async with Promises)
 ////
 //// ## Quick Start
 ////
@@ -75,29 +75,53 @@ pub type FriendInfo {
   )
 }
 
-/// Player online status.
+/// Steam user's online status (persona state).
+///
+/// This represents the current online status that a user has set in Steam.
+/// The status is visible to friends and affects how the user appears in friend lists.
 pub type PersonaState {
+  /// User is offline or appear offline
   Offline
+  /// User is online and available
   Online
+  /// User is online but busy (Do Not Disturb)
   Busy
+  /// User is away from keyboard
   Away
+  /// User is snoozing/sleeping
   Snooze
+  /// User is looking to trade items
   LookingToTrade
+  /// User is looking for people to play with
   LookingToPlay
+  /// User is online but invisible to others
   Invisible
+  /// Unknown/max state value
   Max
 }
 
-/// Friend relationship status.
+/// Steam friend relationship status.
+///
+/// Describes the relationship between the current user and another Steam user.
+/// This includes friend status, pending requests, and blocked users.
 pub type FriendRelationship {
+  /// No relationship
   RelationshipNone
+  /// User has blocked this person
   RelationshipBlocked
+  /// This person sent you a friend request (pending)
   RelationshipRequestRecipient
+  /// This person is your friend
   RelationshipFriend
+  /// You sent this person a friend request (pending)
   RelationshipRequestInitiator
+  /// You have ignored this person
   RelationshipIgnored
+  /// You were friends but now ignored
   RelationshipIgnoredFriend
+  /// Steam suggested this person as a friend
   RelationshipSuggested
+  /// Unknown/max relationship value
   RelationshipMax
 }
 
@@ -106,31 +130,51 @@ pub type LeaderboardEntry {
   LeaderboardEntry(steam_id: String, global_rank: Int, score: Int)
 }
 
-/// Leaderboard upload method.
+/// Leaderboard score upload method.
+///
+/// Determines how new scores are handled when uploading to a leaderboard.
 pub type UploadScoreMethod {
+  /// Only update if the new score is better than the current score
   KeepBest
+  /// Always update, regardless of whether it's better or worse
   ForceUpdate
 }
 
 /// Leaderboard data request type.
+///
+/// Specifies which subset of leaderboard entries to download.
 pub type LeaderboardDataRequest {
+  /// Download the top entries from the entire global leaderboard
   Global
+  /// Download entries around the current user's position
   GlobalAroundUser
+  /// Download entries for friends only
   Friends
 }
 
 /// Leaderboard sort method.
+///
+/// Determines how leaderboard entries are ranked.
 pub type LeaderboardSortMethod {
+  /// No sorting
   SortNone
+  /// Lower scores are better (e.g., speedruns, golf scores)
   Ascending
+  /// Higher scores are better (e.g., high scores, points)
   Descending
 }
 
 /// Leaderboard display type.
+///
+/// Determines how scores are formatted and displayed in the Steam UI.
 pub type LeaderboardDisplayType {
+  /// No special display format
   DisplayNone
+  /// Display as a plain number (e.g., "12345")
   Numeric
+  /// Display as time in seconds (e.g., "1:23.45")
   TimeSeconds
+  /// Display as time in milliseconds (e.g., "1:23.456")
   TimeMilliseconds
 }
 
@@ -596,13 +640,28 @@ pub fn display_name(client: SteamworksClient) -> String
 
 /// Set a Rich Presence key/value pair.
 ///
-/// Rich Presence allows friends to see what you're doing in-game (e.g.,
-/// "In Menu", "Playing Level 3", "Score: 1000").
+/// **What is Rich Presence?**
+/// Rich Presence is a Steam feature that allows your game to display detailed
+/// information about what players are currently doing. This information appears
+/// in the Steam friends list, chat, and on user profiles. It helps friends see
+/// at a glance what you're up to in the game (e.g., "In Multiplayer Lobby",
+/// "Playing Campaign - Level 5", "Score: 12,500 points").
+///
+/// You can set multiple key/value pairs to provide detailed status information.
+/// Steam will format and display this data according to your game's Rich Presence
+/// configuration in the Steamworks partner site.
 ///
 /// ## Parameters
 ///
-/// - `key`: Rich Presence key (e.g., "status", "score", "level")
+/// - `key`: Rich Presence key (e.g., "status", "score", "level", "steam_display")
 /// - `value`: Rich Presence value (e.g., "In Menu", "1000", "Level 3")
+///
+/// ## Common Keys
+///
+/// - `"steam_display"`: Controls which localization token to use for display
+/// - `"status"`: Current game mode or activity
+/// - `"score"`: Player's current score
+/// - `"level"`: Current level or map name
 ///
 /// ## Example
 ///
@@ -615,6 +674,9 @@ pub fn display_name(client: SteamworksClient) -> String
 ///
 /// // Set score
 /// vapour.set_rich_presence(client, "score", "1500")
+///
+/// // Tell Steam which display format to use
+/// vapour.set_rich_presence(client, "steam_display", "#Status_Playing")
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "localplayerSetRichPresence")
 pub fn set_rich_presence(
@@ -625,7 +687,11 @@ pub fn set_rich_presence(
 
 /// Clear all Rich Presence data.
 ///
-/// Removes all Rich Presence information for the current player.
+/// Removes all Rich Presence information for the current player. Friends will
+/// no longer see detailed status about what you're doing in the game.
+///
+/// Call this when the player exits your game or when you want to hide their
+/// current activity.
 ///
 /// ## Example
 ///
@@ -1142,15 +1208,79 @@ fn int_to_relationship(rel: Int) -> FriendRelationship {
   }
 }
 
-/// Get the count of coplay friends (recently played with).
+/// Get the count of coplay friends.
+///
+/// **What is Coplay?**
+/// "Coplay" refers to Steam users you have recently played multiplayer games with.
+/// Steam tracks which friends you've played together with in the same game session,
+/// and this data is used to suggest friends to play with and show recent gaming partners.
+///
+/// Returns the number of friends in your coplay list (friends you've recently played with).
+///
+/// ## Example
+///
+/// ```gleam
+/// let coplay_count = vapour.coplay_friend_count(client)
+/// io.println("You've recently played with " <> int.to_string(coplay_count) <> " friends")
+/// ```
 @external(javascript, "./vapour.ffi.mjs", "friendsGetCoplayFriendCount")
 pub fn coplay_friend_count(client: SteamworksClient) -> Int
 
-/// Get when you last played with a user (Unix timestamp).
+/// Get a coplay friend by index.
+///
+/// Use this with `coplay_friend_count()` to iterate through all friends you've
+/// recently played with.
+///
+/// ## Parameters
+///
+/// - `index`: Zero-based index (0 to coplay_friend_count() - 1)
+///
+/// ## Returns
+///
+/// The Steam ID of the coplay friend at the specified index.
+///
+/// ## Example
+///
+/// ```gleam
+/// let count = vapour.coplay_friend_count(client)
+/// let first_coplay_friend = vapour.coplay_friend(client, 0)
+/// io.println("Recently played with: " <> first_coplay_friend)
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "friendsGetCoplayFriend")
+pub fn coplay_friend(client: SteamworksClient, index: Int) -> String
+
+/// Get when you last played with a specific user.
+///
+/// Returns a Unix timestamp (seconds since January 1, 1970) of when you last
+/// played a multiplayer game together with this friend. Returns 0 if you've
+/// never played together or the data is unavailable.
+///
+/// ## Example
+///
+/// ```gleam
+/// let timestamp = vapour.friend_coplay_time(client, friend_id)
+/// case timestamp {
+///   0 -> io.println("Never played together")
+///   _ -> io.println("Last played together: " <> int.to_string(timestamp))
+/// }
+/// ```
 @external(javascript, "./vapour.ffi.mjs", "friendsGetFriendCoplayTime")
 pub fn friend_coplay_time(client: SteamworksClient, steam_id: String) -> Int
 
-/// Get the App ID of the game you last played with a user.
+/// Get which game you last played with a specific user.
+///
+/// Returns the Steam App ID of the game you most recently played together.
+/// Returns 0 if you've never played together or the data is unavailable.
+///
+/// ## Example
+///
+/// ```gleam
+/// let app_id = vapour.friend_coplay_game(client, friend_id)
+/// case app_id {
+///   0 -> io.println("No coplay game")
+///   _ -> io.println("Last played together in App ID: " <> int.to_string(app_id))
+/// }
+/// ```
 @external(javascript, "./vapour.ffi.mjs", "friendsGetFriendCoplayGame")
 pub fn friend_coplay_game(client: SteamworksClient, steam_id: String) -> Int
 
@@ -1158,6 +1288,10 @@ pub fn friend_coplay_game(client: SteamworksClient, steam_id: String) -> Int
 // Leaderboards API (Async)
 // ============================================================================
 
+/// Opaque type representing a Steam leaderboard.
+///
+/// This handle is obtained from `find_leaderboard()` or `find_or_create_leaderboard()`
+/// and is used to interact with that specific leaderboard (uploading scores, downloading entries, etc.).
 pub type LeaderBoard
 
 /// Find a leaderboard by name (async).
