@@ -17,14 +17,6 @@ Type-safe Gleam bindings for the [Steamworks SDK](https://partner.steamgames.com
 
 ## Installation
 
-Add to your `gleam.toml`:
-
-```toml
-[dependencies]
-vapour = { git = "https://github.com/renatillas/vapour.git", tag = "v0.1.0" }
-gleam_javascript = "~> 1.0"
-```
-
 Add to your `package.json`:
 
 ```json
@@ -33,6 +25,12 @@ Add to your `package.json`:
     "steamworks-ffi-node": "^0.5.3"
   }
 }
+```
+
+Add vapour to your gleam project:
+
+```bash
+gleam add vapour@1
 ```
 
 ## Key Concepts

@@ -1,5 +1,5 @@
 name = "vapour"
-version = "0.1.0"
+version = "1.0.0"
 description = "Type-safe Gleam bindings for steamworks-ffi-node - 1:1 Steam API integration"
 licences = ["MIT"]
 repository = { type = "github", user = "renatillas", repo = "vapour" }
