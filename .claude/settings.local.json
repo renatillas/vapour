@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/renata-amutio/Projects/renatillas/tiramisu/examples/19-ui_overlay/**)",
+      "Bash(xargs cat:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

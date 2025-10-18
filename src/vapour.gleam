@@ -119,6 +119,21 @@ pub type LeaderboardDataRequest {
   Friends
 }
 
+/// Leaderboard sort method.
+pub type LeaderboardSortMethod {
+  SortNone
+  Ascending
+  Descending
+}
+
+/// Leaderboard display type.
+pub type LeaderboardDisplayType {
+  DisplayNone
+  Numeric
+  TimeSeconds
+  TimeMilliseconds
+}
+
 // ============================================================================
 // Core API Functions
 // ============================================================================
@@ -212,12 +227,12 @@ fn do_run_callbacks(client: SteamworksClient) -> Nil
 /// import vapour
 /// import gleam/io
 ///
-/// let status = vapour.get_status(client)
+/// let status = vapour.status(client)
 /// io.println("Steam ID: " <> status.steam_id)
 /// io.println("Connected: " <> bool.to_string(status.is_initialized))
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "getStatus")
-pub fn get_status(client: SteamworksClient) -> Status
+pub fn status(client: SteamworksClient) -> Status
 
 /// Check if the Steam client is running.
 ///
@@ -228,13 +243,13 @@ pub fn get_status(client: SteamworksClient) -> Status
 /// ```gleam
 /// import vapour
 ///
-/// case vapour.is_steam_running(client) {
+/// case vapour.running_steam(client) {
 ///   True -> io.println("Steam is running")
 ///   False -> io.println("Steam is not running")
 /// }
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "isSteamRunning")
-pub fn is_steam_running(client: SteamworksClient) -> Bool
+pub fn running_steam(client: SteamworksClient) -> Bool
 
 // ============================================================================
 // Cloud Storage API
@@ -247,20 +262,20 @@ pub fn is_steam_running(client: SteamworksClient) -> Bool
 /// ## Example
 ///
 /// ```gleam
-/// case vapour.is_cloud_enabled_for_account(client) {
+/// case vapour.cloud_enabled_for_account(client) {
 ///   True -> io.println("Cloud enabled for account")
 ///   False -> io.println("Cloud disabled - user must enable it in Steam settings")
 /// }
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "cloudIsEnabledForAccount")
-pub fn is_cloud_enabled_for_account(client: SteamworksClient) -> Bool
+pub fn cloud_enabled_for_account(client: SteamworksClient) -> Bool
 
 /// Check if Steam Cloud is enabled for the current app.
 ///
 /// Returns `True` if Steam Cloud is enabled for this app. This can be toggled
 /// using `toggle_cloud_for_app()`.
 @external(javascript, "./vapour.ffi.mjs", "cloudIsEnabledForApp")
-pub fn is_cloud_enabled_for_app(client: SteamworksClient) -> Bool
+pub fn cloud_enabled_for_app(client: SteamworksClient) -> Bool
 
 /// Enable or disable Steam Cloud for the current app.
 ///
@@ -471,6 +486,97 @@ pub fn list_achievements(
   client: SteamworksClient,
 ) -> promise.Promise(List(String))
 
+/// Show achievement progress notification (async).
+///
+/// Displays a progress notification in the Steam overlay (e.g., "Win 50 games: 25/50").
+/// Useful for achievements that require multiple steps.
+///
+/// ## Parameters
+///
+/// - `achievement`: Achievement API name
+/// - `current_progress`: Current progress value
+/// - `max_progress`: Maximum progress value needed to unlock
+///
+/// ## Example
+///
+/// ```gleam
+/// import gleam/javascript/promise
+///
+/// vapour.indicate_achievement_progress(client, "ACH_WIN_50_GAMES", 25, 50)
+/// |> promise.await(fn(success) {
+///   case success {
+///     True -> io.println("Progress notification shown")
+///     False -> io.println("Failed to show progress")
+///   }
+///   promise.resolve(Nil)
+/// })
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "achievementIndicateProgress")
+pub fn indicate_achievement_progress(
+  client: SteamworksClient,
+  achievement: String,
+  current_progress: Int,
+  max_progress: Int,
+) -> promise.Promise(Bool)
+
+/// Request global achievement unlock percentages (async).
+///
+/// Must be called before using `achievement_achieved_percent()`.
+/// Returns `True` if the request was sent successfully.
+///
+/// ## Example
+///
+/// ```gleam
+/// import gleam/javascript/promise
+///
+/// vapour.request_global_achievement_percentages(client)
+/// |> promise.await(fn(success) {
+///   case success {
+///     True -> io.println("Global data requested")
+///     False -> io.println("Request failed")
+///   }
+///   promise.resolve(Nil)
+/// })
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "achievementRequestGlobalPercentages")
+pub fn request_global_achievement_percentages(
+  client: SteamworksClient,
+) -> promise.Promise(Bool)
+
+/// Get global unlock percentage for an achievement (async).
+///
+/// Returns what percentage of all players have unlocked this achievement (0-100).
+/// Must call `request_global_achievement_percentages()` first.
+///
+/// ## Example
+///
+/// ```gleam
+/// import gleam/javascript/promise
+///
+/// use request_successful <- promise.await(
+///   vapour.request_global_achievement_percentages(client),
+/// )
+/// case request_successful {
+///   True -> {
+///     vapour.achievement_achieved_percent(client, "ACH_WIN_ONE_GAME")
+///     |> promise.await(fn(result) {
+///       case result {
+///         Ok(percent) ->
+///           io.println(float.to_string(percent) <> "% of players have this")
+///         Error(_) -> io.println("Data not available")
+///       }
+///       promise.resolve(Nil)
+///     })
+///   }
+///   False -> promise.resolve(Nil)
+/// }
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "achievementGetAchievedPercent")
+pub fn achievement_achieved_percent(
+  client: SteamworksClient,
+  achievement: String,
+) -> promise.Promise(Result(Float, Nil))
+
 // ============================================================================
 // Local Player API
 // ============================================================================
@@ -530,51 +636,67 @@ pub fn set_rich_presence(
 @external(javascript, "./vapour.ffi.mjs", "localplayerClearRichPresence")
 pub fn clear_rich_presence(client: SteamworksClient) -> Nil
 
-// ============================================================================
-// Overlay API
-// ============================================================================
+pub type Dialog {
+  FriendsDialog
+  CommunityDialog
+  PlayersDialog
+  SettingsDialog
+  OfficialGameGroupDialog
+  StatsDialog
+  AchievementsDialog
+}
+
+fn dialog_to_string(dialog: Dialog) {
+  case dialog {
+    AchievementsDialog -> "Achievements"
+    CommunityDialog -> "Community"
+    FriendsDialog -> "Friends"
+    OfficialGameGroupDialog -> "OfficialGameGroup"
+    PlayersDialog -> "Players"
+    SettingsDialog -> "Settings"
+    StatsDialog -> "Stats"
+  }
+}
 
 /// Activate a Steam overlay dialog.
 ///
 /// Opens the Steam overlay to a specific dialog.
 ///
-/// ## Common Dialog Names
-///
-/// - `"Friends"`: Show friends list
-/// - `"Community"`: Show community hub
-/// - `"Players"`: Show players in current game
-/// - `"Settings"`: Show Steam settings
-/// - `"OfficialGameGroup"`: Show game's official group
-/// - `"Stats"`: Show stats and achievements
-/// - `"Achievements"`: Show achievements
-///
 /// ## Example
 ///
 /// ```gleam
 /// // Open achievements dialog
-/// vapour.activate_dialog(client, "Achievements")
+/// vapour.activate_dialog(client, AchievementsDialog)
 ///
 /// // Open friends list
-/// vapour.activate_dialog(client, "Friends")
+/// vapour.activate_dialog(client, FriendsDialog)
 /// ```
+pub fn activate_dialog(client: SteamworksClient, dialog: Dialog) {
+  do_activate_dialog(client, dialog_to_string(dialog))
+}
+
 @external(javascript, "./vapour.ffi.mjs", "overlayActivateDialog")
-pub fn activate_dialog(client: SteamworksClient, dialog: String) -> Nil
+fn do_activate_dialog(client: SteamworksClient, dialog: String) -> Nil
 
 /// Activate the Steam overlay to a specific user's profile.
 ///
 /// ## Parameters
 ///
-/// - `dialog`: Dialog type (usually `"steamid"` for profile)
-/// - `steam_id_64`: The user's 64-bit Steam ID as a string
+/// - `steam_id` The user's Steam ID 
 ///
 /// ## Example
 ///
 /// ```gleam
 /// // Open a friend's profile
-/// vapour.activate_user_page_dialog(client, "steamid", "76561197960287930")
+/// vapour.activate_user_page_dialog(client, steam_id)
 /// ```
+pub fn activate_user_page_dialog(client: SteamworksClient, steam_id: SteamId) {
+  let SteamId(id) = steam_id
+  do_activate_user_page_dialog(client, "steam_id", id)
+}
+
 @external(javascript, "./vapour.ffi.mjs", "overlayActivateDialogToUser")
-pub fn activate_user_page_dialog(
+pub fn do_activate_user_page_dialog(
   client: SteamworksClient,
   dialog: String,
   steam_id_64: String,
@@ -616,6 +738,53 @@ pub fn activate_web_page(client: SteamworksClient, url: String) -> Nil
 @external(javascript, "./vapour.ffi.mjs", "overlayActivateStore")
 pub fn activate_store(client: SteamworksClient, app_id: Int) -> Nil
 
+/// Open the Steam overlay invite dialog for a lobby.
+///
+/// Opens the invite dialog where players can select friends to invite to the specified lobby.
+/// Essential for multiplayer games.
+///
+/// ## Parameters
+///
+/// - `lobby_steam_id`: The Steam ID of the lobby to invite friends to
+///
+/// ## Example
+///
+/// ```gleam
+/// // Open invite dialog for a lobby
+/// vapour.invite_friends_to_lobby(client, "109775241021923456")
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "overlayActivateInviteDialog")
+pub fn invite_friends_to_lobby(
+  client: SteamworksClient,
+  lobby_steam_id: String,
+) -> Nil
+
+/// Open the Steam overlay invite dialog with a custom connect string.
+///
+/// Opens the invite dialog and sends the connect string with the invitation.
+/// When friends accept, they receive this connect string (e.g., server IP, session ID).
+///
+/// ## Parameters
+///
+/// - `connect_string`: Custom connection information (e.g., "+connect 192.168.1.100:27015")
+///
+/// ## Example
+///
+/// ```gleam
+/// // Invite with server connection info
+/// let connect_str = "+connect 192.168.1.100:27015"
+/// vapour.invite_friends_with_connect_string(client, connect_str)
+///
+/// // Invite with session ID
+/// let connect_str = "+join_session abc123-def456"
+/// vapour.invite_friends_with_connect_string(client, connect_str)
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "overlayActivateInviteDialogConnectString")
+pub fn invite_friends_with_connect_string(
+  client: SteamworksClient,
+  connect_string: String,
+) -> Nil
+
 // ============================================================================
 // Stats API (Async)
 // ============================================================================
@@ -629,7 +798,7 @@ pub fn activate_store(client: SteamworksClient, app_id: Int) -> Nil
 /// ```gleam
 /// import gleam/javascript/promise
 ///
-/// vapour.get_stat_int(client, "total_kills")
+/// vapour.stat_int(client, "total_kills")
 /// |> promise.await(fn(result) {
 ///   case result {
 ///     Ok(kills) -> io.println("Total kills: " <> int.to_string(kills))
@@ -638,24 +807,11 @@ pub fn activate_store(client: SteamworksClient, app_id: Int) -> Nil
 ///   promise.resolve(Nil)
 /// })
 /// ```
-pub fn get_stat_int(
-  client: SteamworksClient,
-  stat_name: String,
-) -> promise.Promise(Result(Int, Nil)) {
-  do_get_stat_int(client, stat_name)
-  |> promise.map(fn(value) {
-    case value {
-      -1 -> Error(Nil)
-      v -> Ok(v)
-    }
-  })
-}
-
 @external(javascript, "./vapour.ffi.mjs", "statsGetInt")
-fn do_get_stat_int(
+pub fn stat_int(
   client: SteamworksClient,
   stat_name: String,
-) -> promise.Promise(Int)
+) -> promise.Promise(Result(Int, Nil))
 
 /// Get a float stat value for the current user (async).
 ///
@@ -666,7 +822,7 @@ fn do_get_stat_int(
 /// ```gleam
 /// import gleam/javascript/promise
 ///
-/// vapour.get_stat_float(client, "accuracy")
+/// vapour.stat_float(client, "accuracy")
 /// |> promise.await(fn(result) {
 ///   case result {
 ///     Ok(accuracy) -> io.println("Accuracy: " <> float.to_string(accuracy))
@@ -675,24 +831,11 @@ fn do_get_stat_int(
 ///   promise.resolve(Nil)
 /// })
 /// ```
-pub fn get_stat_float(
-  client: SteamworksClient,
-  stat_name: String,
-) -> promise.Promise(Result(Float, Nil)) {
-  do_get_stat_float(client, stat_name)
-  |> promise.map(fn(value) {
-    case value {
-      -1.0 -> Error(Nil)
-      v -> Ok(v)
-    }
-  })
-}
-
 @external(javascript, "./vapour.ffi.mjs", "statsGetFloat")
-fn do_get_stat_float(
+pub fn stat_float(
   client: SteamworksClient,
   stat_name: String,
-) -> promise.Promise(Float)
+) -> promise.Promise(Result(Float, Nil))
 
 /// Set an integer stat value for the current user (async).
 ///
@@ -753,7 +896,7 @@ pub fn set_stat_float(
 /// ```gleam
 /// import gleam/javascript/promise
 ///
-/// vapour.get_number_of_current_players(client)
+/// vapour.number_of_current_players(client)
 /// |> promise.await(fn(result) {
 ///   case result {
 ///     Ok(count) -> io.println(int.to_string(count) <> " players online!")
@@ -762,22 +905,10 @@ pub fn set_stat_float(
 ///   promise.resolve(Nil)
 /// })
 /// ```
-pub fn get_number_of_current_players(
-  client: SteamworksClient,
-) -> promise.Promise(Result(Int, Nil)) {
-  do_get_number_of_current_players(client)
-  |> promise.map(fn(value) {
-    case value {
-      -1 -> Error(Nil)
-      v -> Ok(v)
-    }
-  })
-}
-
 @external(javascript, "./vapour.ffi.mjs", "statsGetNumberOfCurrentPlayers")
-fn do_get_number_of_current_players(
+pub fn number_of_current_players(
   client: SteamworksClient,
-) -> promise.Promise(Int)
+) -> promise.Promise(Result(Int, Nil))
 
 // ============================================================================
 // Friends API
@@ -790,20 +921,20 @@ fn do_get_number_of_current_players(
 /// ## Example
 ///
 /// ```gleam
-/// let state = vapour.get_persona_state(client)
+/// let state = vapour.persona_state(client)
 /// case state {
 ///   vapour.Online -> io.println("You are online")
 ///   vapour.Offline -> io.println("You appear offline")
 ///   _ -> io.println("Other status")
 /// }
 /// ```
-pub fn get_persona_state(client: SteamworksClient) -> PersonaState {
-  let state_int = do_get_persona_state(client)
+pub fn persona_state(client: SteamworksClient) -> PersonaState {
+  let state_int = get_persona_state(client)
   int_to_persona_state(state_int)
 }
 
 @external(javascript, "./vapour.ffi.mjs", "friendsGetPersonaState")
-fn do_get_persona_state(client: SteamworksClient) -> Int
+fn get_persona_state(client: SteamworksClient) -> Int
 
 fn int_to_persona_state(state: Int) -> PersonaState {
   case state {
@@ -826,36 +957,15 @@ fn int_to_persona_state(state: Int) -> PersonaState {
 /// ## Example
 ///
 /// ```gleam
-/// let count = vapour.get_friend_count(client)
+/// let count = vapour.friend_count(client)
 /// io.println("You have " <> int.to_string(count) <> " friends")
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "friendsGetFriendCount")
-pub fn get_friend_count(client: SteamworksClient) -> Int
+pub fn friend_count(client: SteamworksClient) -> Int
 
-/// Get a friend's Steam ID by index.
-///
-/// Returns the Steam ID of the friend at the specified index, or `Error(Nil)` if invalid.
-///
-/// ## Example
-///
-/// ```gleam
-/// case vapour.get_friend_by_index(client, 0) {
-///   Ok(steam_id) -> io.println("First friend: " <> steam_id)
-///   Error(_) -> io.println("No friends at this index")
-/// }
-/// ```
-pub fn get_friend_by_index(
-  client: SteamworksClient,
-  index: Int,
-) -> Result(String, Nil) {
-  case do_get_friend_by_index(client, index) {
-    "" -> Error(Nil)
-    steam_id -> Ok(steam_id)
-  }
+pub type SteamId {
+  SteamId(String)
 }
-
-@external(javascript, "./vapour.ffi.mjs", "friendsGetFriendByIndex")
-fn do_get_friend_by_index(client: SteamworksClient, index: Int) -> String
 
 /// Get a friend's persona name (display name).
 ///
@@ -864,14 +974,11 @@ fn do_get_friend_by_index(client: SteamworksClient, index: Int) -> String
 /// ## Example
 ///
 /// ```gleam
-/// let name = vapour.get_friend_persona_name(client, "76561197960287930")
+/// let name = vapour.friend_persona_name(client, "76561197960287930")
 /// io.println("Friend name: " <> name)
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "friendsGetFriendPersonaName")
-pub fn get_friend_persona_name(
-  client: SteamworksClient,
-  steam_id: String,
-) -> String
+pub fn friend_persona_name(client: SteamworksClient, steam_id: String) -> String
 
 /// Get a friend's persona state (online status).
 ///
@@ -880,26 +987,23 @@ pub fn get_friend_persona_name(
 /// ## Example
 ///
 /// ```gleam
-/// let state = vapour.get_friend_persona_state(client, friend_id)
+/// let state = vapour.friend_persona_state(client, friend_id)
 /// case state {
 ///   vapour.Online -> io.println("Friend is online")
 ///   vapour.Offline -> io.println("Friend is offline")
 ///   _ -> io.println("Friend has other status")
 /// }
 /// ```
-pub fn get_friend_persona_state(
+pub fn friend_persona_state(
   client: SteamworksClient,
   steam_id: String,
 ) -> PersonaState {
-  let state_int = do_get_friend_persona_state(client, steam_id)
+  let state_int = do_friend_persona_state(client, steam_id)
   int_to_persona_state(state_int)
 }
 
 @external(javascript, "./vapour.ffi.mjs", "friendsGetFriendPersonaState")
-fn do_get_friend_persona_state(
-  client: SteamworksClient,
-  steam_id: String,
-) -> Int
+fn do_friend_persona_state(client: SteamworksClient, steam_id: String) -> Int
 
 /// Get all friends with their information.
 ///
@@ -908,13 +1012,13 @@ fn do_get_friend_persona_state(
 /// ## Example
 ///
 /// ```gleam
-/// let friends = vapour.get_all_friends(client)
+/// let friends = vapour.all_friends(client)
 /// list.each(friends, fn(friend) {
 ///   io.println(friend.persona_name <> " (" <> friend.steam_id <> ")")
 /// })
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "friendsGetAllFriends")
-pub fn get_all_friends(client: SteamworksClient) -> List(FriendInfo)
+pub fn all_friends(client: SteamworksClient) -> List(FriendInfo)
 
 /// Get a friend's Steam level.
 ///
@@ -923,11 +1027,11 @@ pub fn get_all_friends(client: SteamworksClient) -> List(FriendInfo)
 /// ## Example
 ///
 /// ```gleam
-/// let level = vapour.get_friend_steam_level(client, friend_id)
+/// let level = vapour.friend_steam_level(client, friend_id)
 /// io.println("Friend is Level " <> int.to_string(level))
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "friendsGetFriendSteamLevel")
-pub fn get_friend_steam_level(client: SteamworksClient, steam_id: String) -> Int
+pub fn friend_steam_level(client: SteamworksClient, steam_id: String) -> Int
 
 /// Get the game a friend is currently playing.
 ///
@@ -936,23 +1040,16 @@ pub fn get_friend_steam_level(client: SteamworksClient, steam_id: String) -> Int
 /// ## Example
 ///
 /// ```gleam
-/// case vapour.get_friend_game_played(client, friend_id) {
+/// case vapour.friend_game_played(client, friend_id) {
 ///   Ok(app_id) -> io.println("Friend is playing App " <> int.to_string(app_id))
 ///   Error(_) -> io.println("Friend is not playing any game")
 /// }
 /// ```
-pub fn get_friend_game_played(
+@external(javascript, "./vapour.ffi.mjs", "friendsGetFriendGamePlayed")
+pub fn friend_game_played(
   client: SteamworksClient,
   steam_id: String,
-) -> Result(Int, Nil) {
-  case do_get_friend_game_played(client, steam_id) {
-    0 -> Error(Nil)
-    app_id -> Ok(app_id)
-  }
-}
-
-@external(javascript, "./vapour.ffi.mjs", "friendsGetFriendGamePlayed")
-fn do_get_friend_game_played(client: SteamworksClient, steam_id: String) -> Int
+) -> Result(Int, Nil)
 
 // ============================================================================
 // Advanced Stats API (Async)
@@ -979,44 +1076,18 @@ pub fn request_global_stats(
 ) -> promise.Promise(Bool)
 
 /// Get a global integer stat (async).
-pub fn get_global_stat_int(
-  client: SteamworksClient,
-  stat_name: String,
-) -> promise.Promise(Result(Int, Nil)) {
-  do_get_global_stat_int(client, stat_name)
-  |> promise.map(fn(value) {
-    case value {
-      -1 -> Error(Nil)
-      v -> Ok(v)
-    }
-  })
-}
-
 @external(javascript, "./vapour.ffi.mjs", "statsGetGlobalStatInt")
-fn do_get_global_stat_int(
+pub fn global_stat_int(
   client: SteamworksClient,
   stat_name: String,
-) -> promise.Promise(Int)
+) -> promise.Promise(Result(Int, Nil))
 
 /// Get a global float stat (async).
-pub fn get_global_stat_float(
-  client: SteamworksClient,
-  stat_name: String,
-) -> promise.Promise(Result(Float, Nil)) {
-  do_get_global_stat_float(client, stat_name)
-  |> promise.map(fn(value) {
-    case value {
-      -1.0 -> Error(Nil)
-      v -> Ok(v)
-    }
-  })
-}
-
 @external(javascript, "./vapour.ffi.mjs", "statsGetGlobalStatFloat")
-fn do_get_global_stat_float(
+pub fn global_stat_float(
   client: SteamworksClient,
   stat_name: String,
-) -> promise.Promise(Float)
+) -> promise.Promise(Result(Float, Nil))
 
 /// Request stats for another user (async).
 @external(javascript, "./vapour.ffi.mjs", "statsRequestUserStats")
@@ -1026,55 +1097,27 @@ pub fn request_user_stats(
 ) -> promise.Promise(Bool)
 
 /// Get an integer stat for another user (async).
-pub fn get_user_stat_int(
-  client: SteamworksClient,
-  steam_id: String,
-  stat_name: String,
-) -> promise.Promise(Result(Int, Nil)) {
-  do_get_user_stat_int(client, steam_id, stat_name)
-  |> promise.map(fn(value) {
-    case value {
-      -1 -> Error(Nil)
-      v -> Ok(v)
-    }
-  })
-}
-
 @external(javascript, "./vapour.ffi.mjs", "statsGetUserStatInt")
-fn do_get_user_stat_int(
+pub fn user_stat_int(
   client: SteamworksClient,
   steam_id: String,
   stat_name: String,
-) -> promise.Promise(Int)
+) -> promise.Promise(Result(Int, Nil))
 
 /// Get a float stat for another user (async).
-pub fn get_user_stat_float(
-  client: SteamworksClient,
-  steam_id: String,
-  stat_name: String,
-) -> promise.Promise(Result(Float, Nil)) {
-  do_get_user_stat_float(client, steam_id, stat_name)
-  |> promise.map(fn(value) {
-    case value {
-      -1.0 -> Error(Nil)
-      v -> Ok(v)
-    }
-  })
-}
-
 @external(javascript, "./vapour.ffi.mjs", "statsGetUserStatFloat")
-fn do_get_user_stat_float(
+pub fn user_stat_float(
   client: SteamworksClient,
   steam_id: String,
   stat_name: String,
-) -> promise.Promise(Float)
+) -> promise.Promise(Result(Float, Nil))
 
 // ============================================================================
 // Advanced Friends API
 // ============================================================================
 
 /// Get the relationship with another user.
-pub fn get_friend_relationship(
+pub fn friend_relationship(
   client: SteamworksClient,
   steam_id: String,
 ) -> FriendRelationship {
@@ -1101,98 +1144,160 @@ fn int_to_relationship(rel: Int) -> FriendRelationship {
 
 /// Get the count of coplay friends (recently played with).
 @external(javascript, "./vapour.ffi.mjs", "friendsGetCoplayFriendCount")
-pub fn get_coplay_friend_count(client: SteamworksClient) -> Int
-
-/// Get a coplay friend's Steam ID by index.
-@external(javascript, "./vapour.ffi.mjs", "friendsGetCoplayFriend")
-pub fn get_coplay_friend(client: SteamworksClient, index: Int) -> String
+pub fn coplay_friend_count(client: SteamworksClient) -> Int
 
 /// Get when you last played with a user (Unix timestamp).
 @external(javascript, "./vapour.ffi.mjs", "friendsGetFriendCoplayTime")
-pub fn get_friend_coplay_time(client: SteamworksClient, steam_id: String) -> Int
+pub fn friend_coplay_time(client: SteamworksClient, steam_id: String) -> Int
 
 /// Get the App ID of the game you last played with a user.
 @external(javascript, "./vapour.ffi.mjs", "friendsGetFriendCoplayGame")
-pub fn get_friend_coplay_game(client: SteamworksClient, steam_id: String) -> Int
+pub fn friend_coplay_game(client: SteamworksClient, steam_id: String) -> Int
 
 // ============================================================================
 // Leaderboards API (Async)
 // ============================================================================
 
+pub type LeaderBoard
+
 /// Find a leaderboard by name (async).
 ///
 /// Returns a leaderboard handle, or `Error(Nil)` if not found.
+@external(javascript, "./vapour.ffi.mjs", "leaderboardsFindLeaderboard")
 pub fn find_leaderboard(
   client: SteamworksClient,
   leaderboard_name: String,
-) -> promise.Promise(Result(String, Nil)) {
-  do_find_leaderboard(client, leaderboard_name)
-  |> promise.map(fn(handle) {
-    case handle {
-      "" -> Error(Nil)
-      h -> Ok(h)
-    }
-  })
+) -> promise.Promise(Result(LeaderBoard, Nil))
+
+/// Find or create a leaderboard with sort and display settings (async).
+///
+/// Searches for a leaderboard by name and creates it if it doesn't exist.
+/// Allows you to specify how scores are sorted and displayed.
+///
+/// ## Parameters
+///
+/// - `name`: Leaderboard name (max 128 UTF-8 bytes)
+/// - `sort_method`: How entries should be sorted (Ascending for times, Descending for scores)
+/// - `display_type`: How scores should be displayed (Numeric, TimeSeconds, etc.)
+///
+/// ## Returns
+///
+/// A Promise that resolves to `Ok(leaderboard)` or `Error(Nil)`.
+///
+/// ## Example
+///
+/// ```gleam
+/// import gleam/javascript/promise
+/// import vapour.{Descending, Numeric}
+///
+/// // Create a high score leaderboard
+/// vapour.find_or_create_leaderboard(client, "HighScores", Descending, Numeric)
+/// |> promise.await(fn(result) {
+///   case result {
+///     Ok(leaderboard) -> io.println("Leaderboard ready")
+///     Error(_) -> io.println("Failed to create leaderboard")
+///   }
+///   promise.resolve(Nil)
+/// })
+///
+/// // Create a speedrun leaderboard (lower time is better)
+/// vapour.find_or_create_leaderboard(client, "Speedrun", Ascending, TimeSeconds)
+/// |> promise.await(fn(result) {
+///   case result {
+///     Ok(lb) -> io.println("Speedrun leaderboard ready")
+///     Error(_) -> io.println("Failed")
+///   }
+///   promise.resolve(Nil)
+/// })
+/// ```
+pub fn find_or_create_leaderboard(
+  client: SteamworksClient,
+  name: String,
+  sort_method: LeaderboardSortMethod,
+  display_type: LeaderboardDisplayType,
+) -> promise.Promise(Result(LeaderBoard, Nil)) {
+  let sort_int = leaderboard_sort_method_to_int(sort_method)
+  let display_int = leaderboard_display_type_to_int(display_type)
+  do_find_or_create_leaderboard(client, name, sort_int, display_int)
 }
 
-@external(javascript, "./vapour.ffi.mjs", "leaderboardsFindLeaderboard")
-fn do_find_leaderboard(
+@external(javascript, "./vapour.ffi.mjs", "leaderboardsFindOrCreateLeaderboard")
+fn do_find_or_create_leaderboard(
   client: SteamworksClient,
-  leaderboard_name: String,
-) -> promise.Promise(String)
+  name: String,
+  sort_method: Int,
+  display_type: Int,
+) -> promise.Promise(Result(LeaderBoard, Nil))
+
+fn leaderboard_sort_method_to_int(method: LeaderboardSortMethod) -> Int {
+  case method {
+    SortNone -> 0
+    Ascending -> 1
+    Descending -> 2
+  }
+}
+
+fn leaderboard_display_type_to_int(display: LeaderboardDisplayType) -> Int {
+  case display {
+    DisplayNone -> 0
+    Numeric -> 1
+    TimeSeconds -> 2
+    TimeMilliseconds -> 3
+  }
+}
 
 /// Upload a score to a leaderboard (async).
 pub fn upload_score(
   client: SteamworksClient,
-  leaderboard_handle: String,
+  leaderboard_handle: LeaderBoard,
   score: Int,
   upload_method: UploadScoreMethod,
 ) -> promise.Promise(Bool) {
-  let method_str = upload_score_method_to_string(upload_method)
-  do_upload_score(client, leaderboard_handle, score, method_str)
+  let method_int = upload_score_method_to_int(upload_method)
+  do_upload_score(client, leaderboard_handle, score, method_int)
 }
 
 @external(javascript, "./vapour.ffi.mjs", "leaderboardsUploadScore")
 fn do_upload_score(
   client: SteamworksClient,
-  leaderboard_handle: String,
+  leaderboard_handle: LeaderBoard,
   score: Int,
-  upload_method: String,
+  upload_method: Int,
 ) -> promise.Promise(Bool)
 
-fn upload_score_method_to_string(method: UploadScoreMethod) -> String {
+fn upload_score_method_to_int(method: UploadScoreMethod) -> Int {
   case method {
-    KeepBest -> "KeepBest"
-    ForceUpdate -> "ForceUpdate"
+    KeepBest -> 1
+    ForceUpdate -> 2
   }
 }
 
 /// Download leaderboard entries (async).
 pub fn download_scores(
   client: SteamworksClient,
-  leaderboard_handle: String,
+  leaderboard_handle: LeaderBoard,
   data_request: LeaderboardDataRequest,
   start: Int,
   end: Int,
 ) -> promise.Promise(List(LeaderboardEntry)) {
-  let request_str = leaderboard_data_request_to_string(data_request)
-  do_download_scores(client, leaderboard_handle, request_str, start, end)
+  let request_int = leaderboard_data_request_to_int(data_request)
+  do_download_scores(client, leaderboard_handle, request_int, start, end)
 }
 
 @external(javascript, "./vapour.ffi.mjs", "leaderboardsDownloadScores")
 fn do_download_scores(
   client: SteamworksClient,
-  leaderboard_handle: String,
-  data_request: String,
+  leaderboard_handle: LeaderBoard,
+  data_request: Int,
   start: Int,
   end: Int,
 ) -> promise.Promise(List(LeaderboardEntry))
 
-fn leaderboard_data_request_to_string(request: LeaderboardDataRequest) -> String {
+fn leaderboard_data_request_to_int(request: LeaderboardDataRequest) -> Int {
   case request {
-    Global -> "Global"
-    GlobalAroundUser -> "GlobalAroundUser"
-    Friends -> "Friends"
+    Global -> 0
+    GlobalAroundUser -> 1
+    Friends -> 2
   }
 }
 
@@ -1200,5 +1305,5 @@ fn leaderboard_data_request_to_string(request: LeaderboardDataRequest) -> String
 @external(javascript, "./vapour.ffi.mjs", "leaderboardsGetEntryCount")
 pub fn get_leaderboard_entry_count(
   client: SteamworksClient,
-  leaderboard_handle: String,
+  leaderboard_handle: LeaderBoard,
 ) -> Int

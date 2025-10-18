@@ -5,14 +5,22 @@
 // No business logic - just thin wrappers around the Steamworks API
 
 // Use nw.require for NW.js compatibility - this loads Node.js modules properly
-// Falls back to regular require for non-NW.js environments
-const nodeRequire = (typeof nw !== 'undefined' && nw.require) ? nw.require : require;
-const SteamworksModule = nodeRequire("steamworks-ffi-node");
+// Falls back to dynamic import for Node.js ES module environments
+let SteamworksModule;
+let SteamworksSDK;
+if (typeof nw !== 'undefined' && nw.require) {
+  // NW.js environment - use nw.require
+  SteamworksModule = nw.require("steamworks-ffi-node");
 
-import { toList } from "./gleam.mjs";
+  SteamworksSDK = SteamworksModule.default;
+} else {
+  // Node.js ES module environment - use dynamic import
+  SteamworksModule = await import("steamworks-ffi-node");
+  SteamworksSDK = SteamworksModule.default.default;
+}
+
+import { toList, Ok, Error, Result } from "./gleam.mjs";
 import * as VAPOUR from "./vapour.mjs"
-
-const SteamworksSDK = SteamworksModule.default;
 
 // ============================================================================
 // Root Level Functions
@@ -42,10 +50,16 @@ export function runCallbacks(steamInstance) {
 /**
  * Get Steam API status information including Steam ID and connection state
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
- * @returns {{isInitialized: boolean, appId: number, steamId: string}} Status object
+ * @returns {{is_initialized: boolean, app_id: number, steam_id: string}} Status object
  */
 export function getStatus(steamInstance) {
-  return steamInstance.getStatus();
+  const status = steamInstance.getStatus();
+  // Convert JavaScript camelCase to Gleam snake_case
+  return new VAPOUR.Status(
+    status.isInitialized,
+    status.appId,
+    status.steamId
+  );
 }
 
 /**
@@ -102,6 +116,38 @@ export async function achievementNames(steamInstance) {
   return toList(jsArray);
 }
 
+/**
+ * Show achievement progress notification
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {string} achievement - The achievement API name
+ * @param {number} currentProgress - Current progress value
+ * @param {number} maxProgress - Maximum progress value
+ * @returns {Promise<boolean>} True if notification shown successfully
+ */
+export async function achievementIndicateProgress(steamInstance, achievement, currentProgress, maxProgress) {
+  return await steamInstance.achievements.indicateAchievementProgress(achievement, currentProgress, maxProgress);
+}
+
+/**
+ * Request global achievement unlock percentages
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @returns {Promise<boolean>} True if request sent successfully
+ */
+export async function achievementRequestGlobalPercentages(steamInstance) {
+  return await steamInstance.achievements.requestGlobalAchievementPercentages();
+}
+
+/**
+ * Get global unlock percentage for an achievement
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {string} achievement - The achievement API name
+ * @returns {Promise<Result<number, Nil>>} Percentage (0-100) or Error if not available
+ */
+export async function achievementGetAchievedPercent(steamInstance, achievement) {
+  const percent = await steamInstance.achievements.getAchievementAchievedPercent(achievement);
+  return percent !== null ? new Ok(percent) : new Error(undefined);
+}
+
 // ============================================================================
 // Cloud API
 // ============================================================================
@@ -138,14 +184,14 @@ export function cloudSetEnabledForApp(steamInstance, enabled) {
  * Read a file from Steam Cloud
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} name - The filename to read
- * @returns {string|null} File contents as string, or null if read failed
+ * @returns {string} File contents as string, or empty string if read failed
  */
 export function cloudReadFile(steamInstance, name) {
   const result = steamInstance.cloud.fileRead(name);
   if (result.success && result.data) {
     return result.data.toString();
   }
-  return null;
+  return "";
 }
 
 /**
@@ -198,10 +244,11 @@ export function cloudListFiles(steamInstance) {
 /**
  * Get the local player's display name (persona name)
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
- * @returns {string} The player's Steam display name
+ * @returns {string} The player's Steam display name or empty string
  */
 export function localplayerGetName(steamInstance) {
-  return steamInstance.friends.getPersonaName();
+  const result = steamInstance.friends.getPersonaName();
+  return result || "";
 }
 
 /**
@@ -232,22 +279,22 @@ export function localplayerClearRichPresence(steamInstance) {
  * Get an integer stat value for the current user
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} statName - Name of the stat to retrieve
- * @returns {Promise<number|null>} Stat value or null if not found
+ * @returns {Promise<Result<number, Nil>>} Stat value or Error if not found
  */
 export async function statsGetInt(steamInstance, statName) {
   const stat = await steamInstance.stats.getStatInt(statName);
-  return stat ? stat.value : null;
+  return stat ? new Ok(stat.value) : new Error(undefined);
 }
 
 /**
  * Get a float stat value for the current user
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} statName - Name of the stat to retrieve
- * @returns {Promise<number|null>} Stat value or null if not found
+ * @returns {Promise<Result<number, Nil>>} Stat value or Error if not found
  */
 export async function statsGetFloat(steamInstance, statName) {
   const stat = await steamInstance.stats.getStatFloat(statName);
-  return stat ? stat.value : null;
+  return stat ? new Ok(stat.value) : new Error(undefined);
 }
 
 /**
@@ -275,10 +322,11 @@ export async function statsSetFloat(steamInstance, statName, value) {
 /**
  * Get the number of players currently playing the game
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
- * @returns {Promise<number|null>} Number of current players or null on error
+ * @returns {Promise<Result<number, Nil>>} Number of current players or Error on error
  */
 export async function statsGetNumberOfCurrentPlayers(steamInstance) {
-  return await steamInstance.stats.getNumberOfCurrentPlayers();
+  const result = await steamInstance.stats.getNumberOfCurrentPlayers();
+  return result ? new Ok(result) : new Error(undefined);
 }
 
 /**
@@ -307,22 +355,22 @@ export async function statsRequestGlobalStats(steamInstance, historyDays) {
  * Get a global stat (int)
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} statName - Name of the stat
- * @returns {Promise<number|null>} Stat value or null
+ * @returns {Promise<Result<number, Nil>>} Stat value or Error if not found
  */
 export async function statsGetGlobalStatInt(steamInstance, statName) {
   const stat = await steamInstance.stats.getGlobalStatInt(statName);
-  return stat ? stat.value : null;
+  return stat ? new Ok(stat.value) : new Error(undefined);
 }
 
 /**
  * Get a global stat (float)
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} statName - Name of the stat
- * @returns {Promise<number|null>} Stat value or null
+ * @returns {Promise<Result<number, Nil>>} Stat value or Error if not found
  */
 export async function statsGetGlobalStatFloat(steamInstance, statName) {
   const stat = await steamInstance.stats.getGlobalStatDouble(statName);
-  return stat ? stat.value : null;
+  return stat ? new Ok(stat.value) : new Error(undefined);
 }
 
 /**
@@ -340,11 +388,11 @@ export async function statsRequestUserStats(steamInstance, steamId) {
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} steamId - User's Steam ID
  * @param {string} statName - Name of the stat
- * @returns {Promise<number|null>} Stat value or null
+ * @returns {Promise<Result<number, Nil>>} Stat value or Error if not found
  */
 export async function statsGetUserStatInt(steamInstance, steamId, statName) {
   const stat = await steamInstance.stats.getUserStatInt(steamId, statName);
-  return stat ? stat.value : null;
+  return stat ? new Ok(stat.value) : new Error(undefined);
 }
 
 /**
@@ -352,11 +400,11 @@ export async function statsGetUserStatInt(steamInstance, steamId, statName) {
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} steamId - User's Steam ID
  * @param {string} statName - Name of the stat
- * @returns {Promise<number|null>} Stat value or null
+ * @returns {Promise<Result<number, Nil>>} Stat value or Error if not found
  */
 export async function statsGetUserStatFloat(steamInstance, steamId, statName) {
   const stat = await steamInstance.stats.getUserStatFloat(steamId, statName);
-  return stat ? stat.value : null;
+  return stat ? new Ok(stat.value) : new Error(undefined);
 }
 
 // ============================================================================
@@ -381,24 +429,16 @@ export function friendsGetFriendCount(steamInstance) {
   return steamInstance.friends.getFriendCount();
 }
 
-/**
- * Get a friend's Steam ID by index
- * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
- * @param {number} index - Friend index
- * @returns {string|null} Steam ID or null
- */
-export function friendsGetFriendByIndex(steamInstance, index) {
-  return steamInstance.friends.getFriendByIndex(index);
-}
 
 /**
  * Get a friend's persona name
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} steamId - Friend's Steam ID
- * @returns {string} Friend's display name
+ * @returns {string} Friend's display name or empty string
  */
 export function friendsGetFriendPersonaName(steamInstance, steamId) {
-  return steamInstance.friends.getFriendPersonaName(steamId);
+  const result = steamInstance.friends.getFriendPersonaName(steamId);
+  return result || "";
 }
 
 /**
@@ -440,11 +480,11 @@ export function friendsGetFriendSteamLevel(steamInstance, steamId) {
  * Check if a friend is playing a game
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} steamId - Friend's Steam ID
- * @returns {number|null} Game App ID or null if not playing
+ * @returns {Result<number, Nil>} Game App ID or Error if not playing
  */
 export function friendsGetFriendGamePlayed(steamInstance, steamId) {
   const gameInfo = steamInstance.friends.getFriendGamePlayed(steamId);
-  return gameInfo ? parseInt(gameInfo.gameId) : null;
+  return gameInfo ? new Ok(parseInt(gameInfo.gameId)) : new Error(undefined);
 }
 
 /**
@@ -466,15 +506,6 @@ export function friendsGetCoplayFriendCount(steamInstance) {
   return steamInstance.friends.getCoplayFriendCount();
 }
 
-/**
- * Get a coplay friend's Steam ID by index
- * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
- * @param {number} index - Coplay friend index
- * @returns {string} Steam ID
- */
-export function friendsGetCoplayFriend(steamInstance, index) {
-  return steamInstance.friends.getCoplayFriend(index);
-}
 
 /**
  * Get when you last played with a user
@@ -541,6 +572,26 @@ export function overlayActivateStore(steamInstance, appId) {
   steamInstance.overlay.activateGameOverlayToStore(appId);
 }
 
+/**
+ * Open the Steam overlay invite dialog for a lobby
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {string} lobbySteamId - The Steam ID of the lobby
+ * @returns {void}
+ */
+export function overlayActivateInviteDialog(steamInstance, lobbySteamId) {
+  steamInstance.overlay.activateGameOverlayInviteDialog(lobbySteamId);
+}
+
+/**
+ * Open the Steam overlay invite dialog with a custom connect string
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {string} connectString - Custom connection information
+ * @returns {void}
+ */
+export function overlayActivateInviteDialogConnectString(steamInstance, connectString) {
+  steamInstance.overlay.activateGameOverlayInviteDialogConnectString(connectString);
+}
+
 // ============================================================================
 // Leaderboards API
 // ============================================================================
@@ -549,39 +600,51 @@ export function overlayActivateStore(steamInstance, appId) {
  * Find a leaderboard by name
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
  * @param {string} leaderboardName - Name of the leaderboard
- * @returns {Promise<string|null>} Leaderboard handle or null if not found
+ * @returns {Promise<Result<string, Nil>>} Leaderboard handle or Error if not found
  */
 export async function leaderboardsFindLeaderboard(steamInstance, leaderboardName) {
-  const handle = await steamInstance.leaderboards.findLeaderboard(leaderboardName);
-  return handle ? handle.toString() : null;
+  const leaderboardInfo = await steamInstance.leaderboards.findLeaderboard(leaderboardName);
+  // leaderboardInfo has: { handle, name, entryCount, sortMethod, displayType }
+  return leaderboardInfo ? new Ok(leaderboardInfo) : new Error(undefined);
+}
+
+/**
+ * Find or create a leaderboard with sort and display settings
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {string} name - Leaderboard name
+ * @param {number} sortMethod - Sort method enum: 0=None, 1=Ascending, 2=Descending
+ * @param {number} displayType - Display type enum: 0=None, 1=Numeric, 2=TimeSeconds, 3=TimeMilliseconds
+ * @returns {Promise<Result<LeaderBoard, Nil>>} Leaderboard info or Error if failed
+ */
+export async function leaderboardsFindOrCreateLeaderboard(steamInstance, name, sortMethod, displayType) {
+  const leaderboardInfo = await steamInstance.leaderboards.findOrCreateLeaderboard(name, sortMethod, displayType);
+  return leaderboardInfo ? new Ok(leaderboardInfo) : new Error(undefined);
 }
 
 /**
  * Upload a score to a leaderboard
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
- * @param {string} leaderboardHandle - Leaderboard handle
+ * @param {VAPOUR.LeaderBoard} leaderboardInfo - Leaderboard info object
  * @param {number} score - Score to upload
- * @param {string} uploadScoreMethod - "KeepBest" or "ForceUpdate"
+ * @param {number} uploadScoreMethod - Enum value: 1=KeepBest, 2=ForceUpdate
  * @returns {Promise<boolean>} True if successful
  */
-export async function leaderboardsUploadScore(steamInstance, leaderboardHandle, score, uploadScoreMethod) {
-  // Convert string handle back to bigint
-  const handle = BigInt(leaderboardHandle);
-  return await steamInstance.leaderboards.uploadScore(handle, score, uploadScoreMethod);
+export async function leaderboardsUploadScore(steamInstance, leaderboardInfo, score, uploadScoreMethod) {
+  const result = await steamInstance.leaderboards.uploadScore(leaderboardInfo.handle, score, uploadScoreMethod);
+  return result ? result.success : false;
 }
 
 /**
  * Download leaderboard entries
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
- * @param {string} leaderboardHandle - Leaderboard handle
- * @param {string} dataRequest - "Global", "GlobalAroundUser", or "Friends"
+ * @param {VAPOUR.LeaderBoard} leaderboardInfo - Leaderboard info object
+ * @param {number} dataRequest - Enum value: 0=Global, 1=GlobalAroundUser, 2=Friends
  * @param {number} start - Start index
  * @param {number} end - End index
  * @returns {Promise<List>} Gleam list of leaderboard entries
  */
-export async function leaderboardsDownloadScores(steamInstance, leaderboardHandle, dataRequest, start, end) {
-  const handle = BigInt(leaderboardHandle);
-  const entries = await steamInstance.leaderboards.downloadScores(handle, dataRequest, start, end);
+export async function leaderboardsDownloadScores(steamInstance, leaderboardInfo, dataRequest, start, end) {
+  const entries = await steamInstance.leaderboards.downloadLeaderboardEntries(leaderboardInfo.handle, dataRequest, start, end);
   const jsArray = entries.map(e => new VAPOUR.LeaderboardEntry(
     e.steamId,
     e.globalRank,
@@ -593,10 +656,10 @@ export async function leaderboardsDownloadScores(steamInstance, leaderboardHandl
 /**
  * Get the entry count for a leaderboard
  * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
- * @param {string} leaderboardHandle - Leaderboard handle
+ * @param {VAPOUR.LeaderBoard} leaderboardHandle - Leaderboard handle
  * @returns {number} Number of entries
  */
-export function leaderboardsGetEntryCount(steamInstance, leaderboardHandle) {
-  const handle = BigInt(leaderboardHandle);
-  return steamInstance.leaderboards.getLeaderboardEntryCount(handle);
+export function leaderboardsGetEntryCount(steamInstance, leaderboardInfo) {
+  // entryCount is a property on LeaderboardInfo, not a method
+  return leaderboardInfo.entryCount;
 }
