@@ -559,11 +559,10 @@ fn demo_leaderboards(client: vapour.SteamworksClient) -> promise.Promise(Nil) {
       io.println("   ✓ find_leaderboard() works")
 
       // Test: get_leaderboard_entry_count()
-      io.println("\n3. Testing get_leaderboard_entry_count()...")
-      let entry_count =
-        vapour.get_leaderboard_entry_count(client, leaderboard_handle)
+      io.println("\n3. Testing leaderboard_entry_count()...")
+      let entry_count = vapour.leaderboard_entry_count(leaderboard_handle)
       io.println("   Entry count: " <> int.to_string(entry_count))
-      io.println("   ✓ get_leaderboard_entry_count() works")
+      io.println("   ✓ leaderboard_entry_count() works")
 
       // Test: upload_score()
       io.println("\n4. Testing upload_score() [async]...")

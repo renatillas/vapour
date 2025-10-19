@@ -66,6 +66,32 @@ pub type FileInfo {
   FileInfo(name: String, bytes: Int)
 }
 
+/// Steam Cloud storage quota information.
+pub type CloudQuota {
+  CloudQuota(
+    total_bytes: Int,
+    available_bytes: Int,
+    used_bytes: Int,
+    percent_used: Float,
+  )
+}
+
+/// Image size information.
+///
+/// Represents the dimensions of an image retrieved from Steam.
+pub type ImageSize {
+  ImageSize(width: Int, height: Int)
+}
+
+/// Image data with RGBA pixel information.
+///
+/// Contains the dimensions and raw RGBA pixel data for an image.
+/// The pixel data is a flat array where each pixel is represented by 4 bytes (RGBA).
+/// Access pixels with: `index = (y * width + x) * 4`
+pub type ImageData {
+  ImageData(width: Int, height: Int, rgba_data: BitArray)
+}
+
 /// Information about a friend.
 pub type FriendInfo {
   FriendInfo(
@@ -428,6 +454,35 @@ pub fn file_exists(client: SteamworksClient, name: String) -> Bool
 @external(javascript, "./vapour.ffi.mjs", "cloudListFiles")
 pub fn list_files(client: SteamworksClient) -> List(FileInfo)
 
+/// Get Steam Cloud storage quota information.
+///
+/// Returns detailed information about cloud storage usage including total,
+/// available, and used bytes, plus the percentage used.
+///
+/// **Important:** This helps prevent "out of space" errors when saving files.
+/// Always check available space before writing large files to Steam Cloud.
+///
+/// ## Example
+///
+/// ```gleam
+/// let quota = vapour.cloud_quota(client)
+///
+/// io.println("Cloud Storage:")
+/// io.println("  Total: " <> int.to_string(quota.total_bytes) <> " bytes")
+/// io.println("  Used: " <> int.to_string(quota.used_bytes) <> " bytes")
+/// io.println("  Available: " <> int.to_string(quota.available_bytes) <> " bytes")
+/// io.println("  Usage: " <> float.to_string(quota.percent_used) <> "%")
+///
+/// // Check before saving
+/// let save_size = 1_000_000  // 1 MB
+/// case quota.available_bytes > save_size {
+///   True -> vapour.write_file(client, "savegame.dat", save_data)
+///   False -> io.println("Not enough cloud storage space!")
+/// }
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "cloudGetQuota")
+pub fn cloud_quota(client: SteamworksClient) -> CloudQuota
+
 // ============================================================================
 // Achievement API (Async)
 // ============================================================================
@@ -620,6 +675,60 @@ pub fn achievement_achieved_percent(
   client: SteamworksClient,
   achievement: String,
 ) -> promise.Promise(Result(Float, Nil))
+
+/// Get the total number of achievements configured for this game (async).
+///
+/// Returns the count of all achievements defined in the Steamworks Partner site,
+/// including both locked and unlocked achievements.
+///
+/// ## Example
+///
+/// ```gleam
+/// import gleam/javascript/promise
+///
+/// vapour.total_achievement_count(client)
+/// |> promise.await(fn(total) {
+///   io.println("This game has " <> int.to_string(total) <> " achievements")
+///   promise.resolve(Nil)
+/// })
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "achievementGetTotalCount")
+pub fn total_achievement_count(client: SteamworksClient) -> promise.Promise(Int)
+
+/// Get the number of achievements the user has unlocked (async).
+///
+/// Returns the count of achievements the current user has unlocked.
+/// Useful for displaying progress like "15/50 achievements unlocked".
+///
+/// ## Example
+///
+/// ```gleam
+/// import gleam/javascript/promise
+///
+/// // Show achievement progress
+/// use total <- promise.await(vapour.total_achievement_count(client))
+/// use unlocked <- promise.await(vapour.unlocked_achievement_count(client))
+///
+/// let percent = case total {
+///   0 -> 0.0
+///   _ -> int.to_float(unlocked) /. int.to_float(total) *. 100.0
+/// }
+///
+/// io.println(
+///   "Progress: "
+///   <> int.to_string(unlocked)
+///   <> "/"
+///   <> int.to_string(total)
+///   <> " ("
+///   <> float.to_string(percent)
+///   <> "%)",
+/// )
+/// promise.resolve(Nil)
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "achievementGetUnlockedCount")
+pub fn unlocked_achievement_count(
+  client: SteamworksClient,
+) -> promise.Promise(Int)
 
 // ============================================================================
 // Local Player API
@@ -1436,8 +1545,116 @@ fn leaderboard_data_request_to_int(request: LeaderboardDataRequest) -> Int {
 }
 
 /// Get the entry count for a leaderboard.
+///
+/// Returns the total number of entries (scores) in the leaderboard.
+///
+/// ## Example
+///
+/// ```gleam
+/// use result <- promise.await(vapour.find_leaderboard(client, "HighScores"))
+/// case result {
+///   Ok(leaderboard) -> {
+///     let count = vapour.get_leaderboard_entry_count(client, leaderboard)
+///     io.println("Leaderboard has " <> int.to_string(count) <> " entries")
+///   }
+///   Error(_) -> io.println("Leaderboard not found")
+/// }
+/// ```
 @external(javascript, "./vapour.ffi.mjs", "leaderboardsGetEntryCount")
-pub fn get_leaderboard_entry_count(
-  client: SteamworksClient,
+pub fn leaderboard_entry_count(leaderboard_handle: LeaderBoard) -> Int
+
+/// Get the name of a leaderboard.
+///
+/// Returns the leaderboard's name as configured in Steam.
+///
+/// ## Example
+///
+/// ```gleam
+/// use result <- promise.await(vapour.find_leaderboard(client, "HighScores"))
+/// case result {
+///   Ok(leaderboard) -> {
+///     let name = vapour.get_leaderboard_name(client, leaderboard)
+///     io.println("Leaderboard name: " <> name)
+///   }
+///   Error(_) -> io.println("Leaderboard not found")
+/// }
+/// ```
+@external(javascript, "./vapour.ffi.mjs", "leaderboardsGetName")
+pub fn get_leaderboard_name(leaderboard_handle: LeaderBoard) -> String
+
+/// Get the sort method of a leaderboard.
+///
+/// Returns how the leaderboard entries are sorted (Ascending, Descending, or None).
+///
+/// ## Example
+///
+/// ```gleam
+/// use result <- promise.await(vapour.find_leaderboard(client, "Speedrun"))
+/// case result {
+///   Ok(leaderboard) -> {
+///     let sort_method = vapour.get_leaderboard_sort_method(client, leaderboard)
+///     case sort_method {
+///       vapour.Ascending -> io.println("Lower scores are better")
+///       vapour.Descending -> io.println("Higher scores are better")
+///       _ -> io.println("No sorting")
+///     }
+///   }
+///   Error(_) -> io.println("Leaderboard not found")
+/// }
+/// ```
+pub fn leaderboard_sort_method(
   leaderboard_handle: LeaderBoard,
-) -> Int
+) -> LeaderboardSortMethod {
+  let sort_int = do_get_leaderboard_sort_method(leaderboard_handle)
+  int_to_sort_method(sort_int)
+}
+
+@external(javascript, "./vapour.ffi.mjs", "leaderboardsGetSortMethod")
+fn do_get_leaderboard_sort_method(leaderboard_handle: LeaderBoard) -> Int
+
+fn int_to_sort_method(value: Int) -> LeaderboardSortMethod {
+  case value {
+    1 -> Ascending
+    2 -> Descending
+    _ -> SortNone
+  }
+}
+
+/// Get the display type of a leaderboard.
+///
+/// Returns how scores should be displayed (Numeric, TimeSeconds, etc.).
+///
+/// ## Example
+///
+/// ```gleam
+/// use result <- promise.await(vapour.find_leaderboard(client, "Speedrun"))
+/// case result {
+///   Ok(leaderboard) -> {
+///     let display = vapour.get_leaderboard_display_type(client, leaderboard)
+///     case display {
+///       vapour.TimeSeconds -> io.println("Scores shown as time in seconds")
+///       vapour.Numeric -> io.println("Scores shown as numbers")
+///       _ -> io.println("Other display format")
+///     }
+///   }
+///   Error(_) -> io.println("Leaderboard not found")
+/// }
+/// ```
+pub fn leaderboard_display_type(
+  leaderboard_handle: LeaderBoard,
+) -> LeaderboardDisplayType {
+  let display_int = do_get_leaderboard_display_type(leaderboard_handle)
+  int_to_display_type(display_int)
+}
+
+@external(javascript, "./vapour.ffi.mjs", "leaderboardsGetDisplayType")
+fn do_get_leaderboard_display_type(leaderboard_handle: LeaderBoard) -> Int
+
+fn int_to_display_type(value: Int) -> LeaderboardDisplayType {
+  case value {
+    1 -> Numeric
+    2 -> TimeSeconds
+    3 -> TimeMilliseconds
+    _ -> DisplayNone
+  }
+}

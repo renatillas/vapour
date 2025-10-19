@@ -19,7 +19,7 @@ if (typeof nw !== 'undefined' && nw.require) {
   SteamworksSDK = SteamworksModule.default.default;
 }
 
-import { toList, Ok, Error, Result } from "./gleam.mjs";
+import { toList, Ok, Error } from "./gleam.mjs";
 import * as VAPOUR from "./vapour.mjs"
 
 // ============================================================================
@@ -148,6 +148,34 @@ export async function achievementGetAchievedPercent(steamInstance, achievement) 
   return percent !== null ? new Ok(percent) : new Error(undefined);
 }
 
+/**
+ * Get the total number of achievements configured for this game
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @returns {Promise<number>} Total achievement count
+ */
+export async function achievementGetTotalCount(steamInstance) {
+  return await steamInstance.achievements.getTotalAchievementCount();
+}
+
+/**
+ * Get the number of achievements the user has unlocked
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @returns {Promise<number>} Unlocked achievement count
+ */
+export async function achievementGetUnlockedCount(steamInstance) {
+  return await steamInstance.achievements.getUnlockedAchievementCount();
+}
+
+/**
+ * Get the icon handle for an achievement
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {string} achievement - The achievement API name
+ * @returns {Promise<number>} Icon handle (0 if unavailable)
+ */
+export async function achievementGetIcon(steamInstance, achievement) {
+  return await steamInstance.achievements.getAchievementIcon(achievement);
+}
+
 // ============================================================================
 // Cloud API
 // ============================================================================
@@ -235,6 +263,21 @@ export function cloudListFiles(steamInstance) {
   const files = steamInstance.cloud.getAllFiles();
   const jsArray = files.map(f => new VAPOUR.FileInfo(f.name, f.size));
   return toList(jsArray);
+}
+
+/**
+ * Get Steam Cloud storage quota information
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @returns {VAPOUR.CloudQuota} Object with totalBytes, availableBytes, usedBytes, percentUsed
+ */
+export function cloudGetQuota(steamInstance) {
+  const quota = steamInstance.cloud.getQuota();
+  return new VAPOUR.CloudQuota(
+    quota.totalBytes,
+    quota.availableBytes,
+    quota.usedBytes,
+    quota.percentUsed
+  );
 }
 
 // ============================================================================
@@ -506,6 +549,16 @@ export function friendsGetCoplayFriendCount(steamInstance) {
   return steamInstance.friends.getCoplayFriendCount();
 }
 
+/**
+ * Get a coplay friend by index
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {number} index - Friend index
+ * @returns {string} Friend's Steam ID
+ */
+export function friendsGetCoplayFriend(steamInstance, index) {
+  return steamInstance.friends.getCoplayFriend(index);
+}
+
 
 /**
  * Get when you last played with a user
@@ -659,7 +712,37 @@ export async function leaderboardsDownloadScores(steamInstance, leaderboardInfo,
  * @param {VAPOUR.LeaderBoard} leaderboardHandle - Leaderboard handle
  * @returns {number} Number of entries
  */
-export function leaderboardsGetEntryCount(steamInstance, leaderboardInfo) {
+export function leaderboardsGetEntryCount(leaderboardInfo) {
   // entryCount is a property on LeaderboardInfo, not a method
   return leaderboardInfo.entryCount;
+}
+
+/**
+ * Get the name of a leaderboard
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {VAPOUR.LeaderBoard} leaderboardHandle - Leaderboard handle
+ * @returns {string} Leaderboard name
+ */
+export function leaderboardsGetName(leaderboardInfo) {
+  return leaderboardInfo.name;
+}
+
+/**
+ * Get the sort method of a leaderboard
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {VAPOUR.LeaderBoard} leaderboardHandle - Leaderboard handle
+ * @returns {number} Sort method enum (0=None, 1=Ascending, 2=Descending)
+ */
+export function leaderboardsGetSortMethod(leaderboardInfo) {
+  return leaderboardInfo.sortMethod;
+}
+
+/**
+ * Get the display type of a leaderboard
+ * @param {SteamworksSDK} steamInstance - The Steamworks SDK instance
+ * @param {VAPOUR.LeaderBoard} leaderboardHandle - Leaderboard handle
+ * @returns {number} Display type enum (0=None, 1=Numeric, 2=TimeSeconds, 3=TimeMilliseconds)
+ */
+export function leaderboardsGetDisplayType(leaderboardInfo) {
+  return leaderboardInfo.displayType;
 }
