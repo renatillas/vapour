@@ -76,22 +76,6 @@ pub type CloudQuota {
   )
 }
 
-/// Image size information.
-///
-/// Represents the dimensions of an image retrieved from Steam.
-pub type ImageSize {
-  ImageSize(width: Int, height: Int)
-}
-
-/// Image data with RGBA pixel information.
-///
-/// Contains the dimensions and raw RGBA pixel data for an image.
-/// The pixel data is a flat array where each pixel is represented by 4 bytes (RGBA).
-/// Access pixels with: `index = (y * width + x) * 4`
-pub type ImageData {
-  ImageData(width: Int, height: Int, rgba_data: BitArray)
-}
-
 /// Information about a friend.
 pub type FriendInfo {
   FriendInfo(
@@ -1580,7 +1564,7 @@ pub fn leaderboard_entry_count(leaderboard_handle: LeaderBoard) -> Int
 /// }
 /// ```
 @external(javascript, "./vapour.ffi.mjs", "leaderboardsGetName")
-pub fn get_leaderboard_name(leaderboard_handle: LeaderBoard) -> String
+pub fn leaderboard_name(leaderboard_handle: LeaderBoard) -> String
 
 /// Get the sort method of a leaderboard.
 ///
