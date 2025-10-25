@@ -4,7 +4,7 @@
   "description": "Type-safe Gleam bindings for steamworks-ffi-node",
   "type": "module",
   "dependencies": {
-    "steamworks-ffi-node": "^0.5.3"
+    "steamworks-ffi-node": "^0.6.0"
   },
   "devDependencies": {},
   "repository": {

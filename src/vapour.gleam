@@ -1538,7 +1538,7 @@ fn leaderboard_data_request_to_int(request: LeaderboardDataRequest) -> Int {
 /// use result <- promise.await(vapour.find_leaderboard(client, "HighScores"))
 /// case result {
 ///   Ok(leaderboard) -> {
-///     let count = vapour.get_leaderboard_entry_count(client, leaderboard)
+///     let count = vapour.leaderboard_entry_count(client, leaderboard)
 ///     io.println("Leaderboard has " <> int.to_string(count) <> " entries")
 ///   }
 ///   Error(_) -> io.println("Leaderboard not found")
@@ -1557,7 +1557,7 @@ pub fn leaderboard_entry_count(leaderboard_handle: LeaderBoard) -> Int
 /// use result <- promise.await(vapour.find_leaderboard(client, "HighScores"))
 /// case result {
 ///   Ok(leaderboard) -> {
-///     let name = vapour.get_leaderboard_name(client, leaderboard)
+///     let name = vapour.leaderboard_name(client, leaderboard)
 ///     io.println("Leaderboard name: " <> name)
 ///   }
 ///   Error(_) -> io.println("Leaderboard not found")
@@ -1576,7 +1576,7 @@ pub fn leaderboard_name(leaderboard_handle: LeaderBoard) -> String
 /// use result <- promise.await(vapour.find_leaderboard(client, "Speedrun"))
 /// case result {
 ///   Ok(leaderboard) -> {
-///     let sort_method = vapour.get_leaderboard_sort_method(client, leaderboard)
+///     let sort_method = vapour.leaderboard_sort_method(client, leaderboard)
 ///     case sort_method {
 ///       vapour.Ascending -> io.println("Lower scores are better")
 ///       vapour.Descending -> io.println("Higher scores are better")
@@ -1589,12 +1589,12 @@ pub fn leaderboard_name(leaderboard_handle: LeaderBoard) -> String
 pub fn leaderboard_sort_method(
   leaderboard_handle: LeaderBoard,
 ) -> LeaderboardSortMethod {
-  let sort_int = do_get_leaderboard_sort_method(leaderboard_handle)
+  let sort_int = do_leaderboard_sort_method(leaderboard_handle)
   int_to_sort_method(sort_int)
 }
 
 @external(javascript, "./vapour.ffi.mjs", "leaderboardsGetSortMethod")
-fn do_get_leaderboard_sort_method(leaderboard_handle: LeaderBoard) -> Int
+fn do_leaderboard_sort_method(leaderboard_handle: LeaderBoard) -> Int
 
 fn int_to_sort_method(value: Int) -> LeaderboardSortMethod {
   case value {
@@ -1614,7 +1614,7 @@ fn int_to_sort_method(value: Int) -> LeaderboardSortMethod {
 /// use result <- promise.await(vapour.find_leaderboard(client, "Speedrun"))
 /// case result {
 ///   Ok(leaderboard) -> {
-///     let display = vapour.get_leaderboard_display_type(client, leaderboard)
+///     let display = vapour.leaderboard_display_type(client, leaderboard)
 ///     case display {
 ///       vapour.TimeSeconds -> io.println("Scores shown as time in seconds")
 ///       vapour.Numeric -> io.println("Scores shown as numbers")
@@ -1627,12 +1627,12 @@ fn int_to_sort_method(value: Int) -> LeaderboardSortMethod {
 pub fn leaderboard_display_type(
   leaderboard_handle: LeaderBoard,
 ) -> LeaderboardDisplayType {
-  let display_int = do_get_leaderboard_display_type(leaderboard_handle)
+  let display_int = do_leaderboard_display_type(leaderboard_handle)
   int_to_display_type(display_int)
 }
 
 @external(javascript, "./vapour.ffi.mjs", "leaderboardsGetDisplayType")
-fn do_get_leaderboard_display_type(leaderboard_handle: LeaderBoard) -> Int
+fn do_leaderboard_display_type(leaderboard_handle: LeaderBoard) -> Int
 
 fn int_to_display_type(value: Int) -> LeaderboardDisplayType {
   case value {

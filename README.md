@@ -22,10 +22,15 @@ Add to your `package.json`:
 ```json
 {
   "dependencies": {
-    "steamworks-ffi-node": "^0.5.3"
+    "steamworks-ffi-node": "^0.6.0"
   }
 }
 ```
+
+### Important: How to setup Steamworks SDK
+
+For the correct functionality of the library you will need to setup steamworks_sdk manually.
+The author of `steamworks-ffi-node` has provided a guide [here](https://github.com/ArtyProf/steamworks-ffi-node/blob/main/docs/STEAMWORKS_SDK_SETUP.md)
 
 Add vapour to your gleam project:
 
